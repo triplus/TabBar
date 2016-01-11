@@ -54,6 +54,26 @@ def guiUp():
                 '   ++++++++++++ ',
                 '                ']
 
+    settingsIcon = ['16 16 2 1',
+                    ' 	c None',
+                    '.	c #888A85',
+                    '                ',
+                    '                ',
+                    '  ............  ',
+                    '  ............  ',
+                    '                ',
+                    '                ',
+                    '                ',
+                    '  ............  ',
+                    '  ............  ',
+                    '                ',
+                    '                ',
+                    '                ',
+                    '  ............  ',
+                    '  ............  ',
+                    '                ',
+                    '                ']
+
     def xpmParse(i):
         icon = []
         for a in ((((i
@@ -82,12 +102,156 @@ def guiUp():
 
     tbTabs = tabWidget()
     tbDock.setWidget(tbTabs)
+    tbDockTitleBar = tbDock.titleBarWidget()
+
+    def onControl():
+        mw = FreeCADGui.getMainWindow()
+
+        for i in mw.findChildren(QtGui.QDialog):
+            if i.objectName() == "tbPreferences":
+                i.deleteLater()
+
+        tbPrefDialog = QtGui.QDialog(mw)
+        tbPrefDialog.resize(600, 400)
+        tbPrefDialog.setObjectName("tbPreferences")
+        tbPrefDialog.setWindowTitle("TabBar")
+        tbPrefDialog.show()
+
+    def quickMenu():
+        paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+
+        menu = QtGui.QMenu()
+
+        # TEMP
+        menu.setStyleSheet("padding: 5px")
+        #
+
+        lockAction = QtGui.QAction(menu)
+        lockAction.setIconText("Lock")
+        lockAction.setCheckable(True)
+
+        radioTop = QtGui.QRadioButton("Top")
+        radioActionTop = QtGui.QWidgetAction(menu)
+        radioActionTop.setDefaultWidget(radioTop)
+
+        radioBottom = QtGui.QRadioButton("Bottom")
+        radioActionBottom = QtGui.QWidgetAction(menu)
+        radioActionBottom.setDefaultWidget(radioBottom)
+
+        radioLeft = QtGui.QRadioButton("Left")
+        radioActionLeft = QtGui.QWidgetAction(menu)
+        radioActionLeft.setDefaultWidget(radioLeft)
+
+        radioRight = QtGui.QRadioButton("Right")
+        radioActionRight = QtGui.QWidgetAction(menu)
+        radioActionRight.setDefaultWidget(radioRight)
+
+        prefAction = QtGui.QAction(menu)
+        prefAction.setIconText("Preferences")
+        prefButton = QtGui.QToolButton()
+        prefButton.setDefaultAction(prefAction)
+        prefButtonAction = QtGui.QWidgetAction(menu)
+        prefButtonAction.setDefaultWidget(prefButton)
+
+        menu.addAction(lockAction)
+        menu.addSeparator()
+        menu.addAction(radioActionTop)
+        menu.addAction(radioActionBottom)
+        menu.addAction(radioActionLeft)
+        menu.addAction(radioActionRight)
+        menu.addSeparator()
+        menu.addAction(prefButtonAction)
+
+        menuButton = QtGui.QToolButton()
+        menuButton.setMenu(menu)
+        menuButton.setAutoRaise(True)
+        menuButton.setIcon(QtGui.QIcon(QtGui.QPixmap(settingsIcon)))
+        menuButton.setPopupMode(QtGui.QToolButton
+                                .ToolButtonPopupMode.InstantPopup)
+
+        def toTop():
+            if radioTop.isChecked():
+                tbTabs.setTabPosition(QtGui.QTabWidget.North)
+                paramGet.SetString("Position", "North")
+            else:
+                pass
+
+        radioTop.toggled.connect(toTop)
+
+        def toBottom():
+            if radioBottom.isChecked():
+                tbTabs.setTabPosition(QtGui.QTabWidget.South)
+                paramGet.SetString("Position", "South")
+            else:
+                pass
+
+        radioBottom.toggled.connect(toBottom)
+
+        def toLeft():
+            if radioLeft.isChecked():
+                tbTabs.setTabPosition(QtGui.QTabWidget.West)
+                paramGet.SetString("Position", "West")
+            else:
+                pass
+
+        radioLeft.toggled.connect(toLeft)
+
+        def toRight():
+            if radioRight.isChecked():
+                tbTabs.setTabPosition(QtGui.QTabWidget.East)
+                paramGet.SetString("Position", "East")
+            else:
+                pass
+
+        radioRight.toggled.connect(toRight)
+
+        def onLockToggle():
+            if lockAction.isChecked():
+                tbDock.setTitleBarWidget(QtGui.QWidget(None))
+                paramGet.SetBool("Lock", 1)
+            else:
+                tbDock.setTitleBarWidget(tbDockTitleBar)
+                paramGet.SetBool("Lock", 0)
+
+        lockAction.changed.connect(onLockToggle)
+
+        prefButton.clicked.connect(onControl)
+
+        def onOpen():
+            if paramGet.GetString("Position"):
+                if paramGet.GetString("Position") == "North":
+                    radioTop.setChecked(True)
+                elif paramGet.GetString("Position") == "South":
+                    radioBottom.setChecked(True)
+                elif paramGet.GetString("Position") == "West":
+                    radioLeft.setChecked(True)
+                elif paramGet.GetString("Position") == "East":
+                    radioRight.setChecked(True)
+            else:
+                radioTop.setChecked(True)
+
+            if paramGet.GetBool("Lock"):
+                lockAction.setChecked(True)
+            else:
+                lockAction.setChecked(False)
+
+        menu.aboutToShow.connect(onOpen)
+
+        onOpen()
+
+        return menuButton
 
     def addTabs():
         wbList = FreeCADGui.listWorkbenches()
 
         for i in wbList:
             widget = QtGui.QWidget()
+
+            # TEMP
+            btn = quickMenu()
+            btn.resize(32, 32)
+            btn.setParent(widget)
+            #
 
             try:
                 icon = wbList[i].Icon
