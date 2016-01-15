@@ -86,6 +86,19 @@ def guiUp():
                         .rsplit('"', 1)[0])
         return icon
 
+    def wbIcon(i):
+
+        if str(i.find("XPM")) != "-1":
+            icon = QtGui.QIcon(QtGui.QPixmap(xpmParse(i)))
+        else:
+            icon = QtGui.QIcon(QtGui.QPixmap(i))
+
+        if icon.pixmap(QSize(16, 16)).isNull():
+            icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
+        else:
+            pass
+        return icon
+
     def findDockWidget():
         mw = FreeCADGui.getMainWindow()
 
@@ -104,6 +117,93 @@ def guiUp():
     tbDock.setWidget(tbTabs)
     tbDockTitleBar = tbDock.titleBarWidget()
 
+    def tabPrefGeneral():
+        groupTabStyle = QtGui.QGroupBox("Tab style:")
+        layoutTabStyle = QtGui.QVBoxLayout()
+        groupTabStyle.setLayout(layoutTabStyle)
+
+        radioTabStyleDefault = QtGui.QRadioButton("Default")
+        radioTabStyleIcon = QtGui.QRadioButton("Icon")
+        radioTabStyleText = QtGui.QRadioButton("Text")
+
+        layoutTabStyle.addWidget(radioTabStyleDefault)
+        layoutTabStyle.addWidget(radioTabStyleIcon)
+        layoutTabStyle.addWidget(radioTabStyleText)
+        layoutTabStyle.addStretch(1)
+
+        def onTabStyleDefault():
+            paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+
+            if radioTabStyleDefault.isChecked():
+                for i in xrange(tbTabs.count()):
+                    try:
+                        icon = wbIcon((FreeCADGui
+                                      .getWorkbench(tbTabs.widget(i)
+                                       .objectName())).Icon)
+                    except:
+                        icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
+                    tbTabs.setTabIcon(i, icon)
+                    tbTabs.setTabText(i, tbTabs.widget(i).windowTitle())
+                paramGet.SetString("TabStyle", "Default")
+            else:
+                pass
+
+        radioTabStyleDefault.toggled.connect(onTabStyleDefault)
+
+        def onTabStyleIcon():
+            paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+
+            if radioTabStyleIcon.isChecked():
+                for i in xrange(tbTabs.count()):
+                    try:
+                        icon = wbIcon((FreeCADGui
+                                      .getWorkbench(tbTabs.widget(i)
+                                       .objectName())).Icon)
+                    except:
+                        icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
+                    tbTabs.setTabText(i, "")
+                    tbTabs.setTabIcon(i, icon)
+                paramGet.SetString("TabStyle", "Icon")
+            else:
+                pass
+
+        radioTabStyleIcon.toggled.connect(onTabStyleIcon)
+
+        def onTabStyleText():
+            paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+
+            if radioTabStyleText.isChecked():
+                for i in xrange(tbTabs.count()):
+                    tbTabs.setTabIcon(i, QtGui.QIcon())
+                    tbTabs.setTabText(i, tbTabs.widget(i).windowTitle())
+                paramGet.SetString("TabStyle", "Text")
+            else:
+                pass
+
+        radioTabStyleText.toggled.connect(onTabStyleText)
+
+        widgetGeneral = QtGui.QWidget()
+        layoutGeneral = QtGui.QHBoxLayout()
+        widgetGeneral.setLayout(layoutGeneral)
+
+        layoutGeneralLeft = QtGui.QVBoxLayout()
+        layoutGeneral.addLayout(layoutGeneralLeft)
+        layoutGeneralLeft.addWidget(groupTabStyle)
+
+        paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+
+        if paramGet.GetString("TabStyle"):
+            if paramGet.GetString("TabStyle") == "Default":
+                radioTabStyleDefault.setChecked(True)
+            elif paramGet.GetString("TabStyle") == "Icon":
+                radioTabStyleIcon.setChecked(True)
+            elif paramGet.GetString("TabStyle") == "Text":
+                radioTabStyleText.setChecked(True)
+        else:
+            radioTabStyleDefault.setChecked(True)
+
+        return widgetGeneral
+
     def onControl():
         mw = FreeCADGui.getMainWindow()
 
@@ -115,7 +215,14 @@ def guiUp():
         tbPrefDialog.resize(600, 400)
         tbPrefDialog.setObjectName("tbPreferences")
         tbPrefDialog.setWindowTitle("TabBar")
+        tbPrefDialogLayout = QtGui.QVBoxLayout()
+        tbPrefDialog.setLayout(tbPrefDialogLayout)
         tbPrefDialog.show()
+
+        tbPrefTabs = QtGui.QTabWidget()
+        tbPrefDialogLayout.addWidget(tbPrefTabs)
+
+        tbPrefTabs.addTab(tabPrefGeneral(), "General")
 
     def quickMenu():
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
@@ -243,38 +350,59 @@ def guiUp():
 
     def addTabs():
         wbList = FreeCADGui.listWorkbenches()
+        paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
 
         for i in wbList:
             widget = QtGui.QWidget()
+            widget.setObjectName(i)
 
             # TEMP
+            widget.setWindowTitle(wbList[i].MenuText)
             btn = quickMenu()
             btn.resize(32, 32)
             btn.setParent(widget)
             #
 
             try:
-                icon = wbList[i].Icon
-
-                if str(icon.find("XPM")) != "-1":
-                    icon = QtGui.QIcon(QtGui.QPixmap(xpmParse(icon)))
-                else:
-                    icon = QtGui.QIcon(QtGui.QPixmap(icon))
-
-                if icon.pixmap(QSize(16, 16)).isNull():
-                    icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
-                else:
-                    pass
-
-                tbTabs.addTab(widget, icon, wbList[i].MenuText)
-
+                icon = wbIcon(wbList[i].Icon)
             except:
                 icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
+
+            if paramGet.GetString("TabStyle"):
+                if paramGet.GetString("TabStyle") == "Default":
+                    tbTabs.addTab(widget, icon, wbList[i].MenuText)
+                elif paramGet.GetString("TabStyle") == "Icon":
+                    tbTabs.addTab(widget, icon, "")
+                elif paramGet.GetString("TabStyle") == "Text":
+                    tbTabs.addTab(widget, wbList[i].MenuText)
+            else:
                 tbTabs.addTab(widget, icon, wbList[i].MenuText)
 
             tbTabs.setTabToolTip(tbTabs.indexOf(widget), wbList[i].ToolTip)
 
     addTabs()
+
+    def afterStart():
+        paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+
+        if paramGet.GetString("Position"):
+            if paramGet.GetString("Position") == "North":
+                tbTabs.setTabPosition(QtGui.QTabWidget.North)
+            elif paramGet.GetString("Position") == "South":
+                tbTabs.setTabPosition(QtGui.QTabWidget.South)
+            elif paramGet.GetString("Position") == "West":
+                tbTabs.setTabPosition(QtGui.QTabWidget.West)
+            elif paramGet.GetString("Position") == "East":
+                tbTabs.setTabPosition(QtGui.QTabWidget.East)
+        else:
+            tbTabs.setTabPosition(QtGui.QTabWidget.North)
+
+        if paramGet.GetBool("Lock"):
+            tbDock.setTitleBarWidget(QtGui.QWidget(None))
+        else:
+            tbDock.setTitleBarWidget(tbDockTitleBar)
+
+    afterStart()
 
 timer = QtCore.QTimer()
 timer.setSingleShot(True)
