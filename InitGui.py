@@ -111,6 +111,7 @@ def guiUp():
 
     def tabWidget():
         widget = QtGui.QTabWidget()
+        widget.setMovable(True)
         return widget
 
     tbTabs = tabWidget()
@@ -351,38 +352,69 @@ def guiUp():
     def addTabs():
         wbList = FreeCADGui.listWorkbenches()
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+        paramWBGet = App.ParamGet("User parameter:BaseApp/Workbenches")
 
+        unsortedWBList = []
         for i in wbList:
-            widget = QtGui.QWidget()
-            widget.setObjectName(i)
+            unsortedWBList.append(i)
 
-            # TEMP
-            widget.setWindowTitle(wbList[i].MenuText)
-            btn = quickMenu()
-            btn.resize(32, 32)
-            btn.setParent(widget)
-            #
+        sortedWBList = sorted(unsortedWBList)
 
-            try:
-                icon = wbIcon(wbList[i].Icon)
-            except:
-                icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
+        if paramWBGet.GetString("Disabled"):
+            disabledWB = (((paramWBGet.GetString("Disabled"))
+                          .rsplit(',', 1)[0])
+                          .split(","))
+            for i in disabledWB:
+                if i in sortedWBList:
+                    sortedWBList.remove(i)
+        else:
+            pass
 
-            if paramGet.GetString("TabStyle"):
-                if paramGet.GetString("TabStyle") == "Default":
+        if paramWBGet.GetString("Enabled"):
+            tempWBList = []
+            enabledWB = (((paramWBGet.GetString("Enabled"))
+                         .rsplit(',', 1)[0])
+                         .split(","))
+            for i in enabledWB:
+                if i in sortedWBList:
+                    tempWBList.append(i)
+            sortedWBList = tempWBList
+        else:
+            pass
+
+        for i in sortedWBList:
+            if i in wbList:
+                widget = QtGui.QWidget()
+                widget.setObjectName(i)
+
+                # TEMP
+                widget.setWindowTitle(wbList[i].MenuText)
+                btn = quickMenu()
+                btn.resize(32, 32)
+                btn.setParent(widget)
+                #
+
+                try:
+                    icon = wbIcon(wbList[i].Icon)
+                except:
+                    icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
+
+                if paramGet.GetString("TabStyle"):
+                    if paramGet.GetString("TabStyle") == "Default":
+                        tbTabs.addTab(widget, icon, wbList[i].MenuText)
+                    elif paramGet.GetString("TabStyle") == "Icon":
+                        tbTabs.addTab(widget, icon, "")
+                    elif paramGet.GetString("TabStyle") == "Text":
+                        tbTabs.addTab(widget, wbList[i].MenuText)
+                else:
                     tbTabs.addTab(widget, icon, wbList[i].MenuText)
-                elif paramGet.GetString("TabStyle") == "Icon":
-                    tbTabs.addTab(widget, icon, "")
-                elif paramGet.GetString("TabStyle") == "Text":
-                    tbTabs.addTab(widget, wbList[i].MenuText)
-            else:
-                tbTabs.addTab(widget, icon, wbList[i].MenuText)
 
-            tbTabs.setTabToolTip(tbTabs.indexOf(widget), wbList[i].ToolTip)
+                tbTabs.setTabToolTip(tbTabs.indexOf(widget), wbList[i].ToolTip)
 
     addTabs()
 
     def afterStart():
+        mw = FreeCADGui.getMainWindow()
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
 
         if paramGet.GetString("Position"):
@@ -401,6 +433,14 @@ def guiUp():
             tbDock.setTitleBarWidget(QtGui.QWidget(None))
         else:
             tbDock.setTitleBarWidget(tbDockTitleBar)
+
+        activeWB = Gui.activeWorkbench().name()
+
+        # TEMP
+        for i in mw.findChildren(QtGui.QWidget):
+        #
+            if i.objectName() == activeWB:
+                tbTabs.setCurrentIndex(tbTabs.indexOf(i))
 
     afterStart()
 
