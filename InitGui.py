@@ -1,3 +1,22 @@
+#TabBar widget for FreeCAD
+#Copyright (C) 2015, 2016  triplus @ FreeCAD
+#
+#
+#This library is free software; you can redistribute it and/or
+#modify it under the terms of the GNU Lesser General Public
+#License as published by the Free Software Foundation; either
+#version 2.1 of the License, or (at your option) any later version.
+#
+#This library is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#Lesser General Public License for more details.
+#
+#You should have received a copy of the GNU Lesser General Public
+#License along with this library; if not, write to the Free Software
+#Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+
 from PySide import QtCore
 
 
@@ -32,6 +51,8 @@ def guiUp():
     from PySide import QtCore
     from PySide import QtGui
     from PySide.QtCore import QSize
+    import FlowLayout
+    import InstallEvent
 
     noneIcon = ['16 16 3 1',
                 ' 	c None',
@@ -74,6 +95,60 @@ def guiUp():
                     '                ',
                     '                ']
 
+    quickMenuStyle = ("padding: 5px")
+
+    scrollStyle = ("""
+        QScrollArea {
+            border: none;
+            background: transparent;
+        }
+
+        QScrollArea > QWidget > QWidget {
+            border: none;
+            background: transparent;
+        }
+
+        QScrollArea QToolButton {
+            margin: 0;
+            padding: 2px;
+            padding-left: 4px;
+            padding-right: 4px;
+            border: 1px solid transparent;
+            border-radius: 2px;
+        }
+
+        QScrollArea QToolButton#menuButton {
+            padding-left: 1px;
+            padding-right: 7px;
+        }
+
+        QScrollArea QToolButton:hover {
+            border: 1px solid lightblue;
+        }
+
+        QScrollArea QToolButton:pressed {
+            padding-left: 5px;
+            padding-top: 3px;
+        }
+
+        QScrollArea QToolButton#menuButton:pressed {
+            padding-left: 2px;
+            padding-top: 3px;
+        }
+
+        QScrollArea QToolButton#menuButton::menu-button,
+        QScrollArea QToolButton#menuButton::menu-indicator {
+            margin: 0;
+            padding: 0;
+            border: none;
+            background: transparent;
+            width: 11px;
+            height: 14px;
+            subcontrol-origin: padding;
+            subcontrol-position: bottom right;
+        }
+        """)
+
     def xpmParse(i):
         icon = []
         for a in ((((i
@@ -99,6 +174,25 @@ def guiUp():
             pass
         return icon
 
+    def wbToolbars():
+        mw = FreeCADGui.getMainWindow()
+
+        for i in mw.findChildren(QtGui.QAction):
+            if i.objectName() == "Std_ToolBarMenu":
+                menu = i.menu()
+
+        tempButton = QtGui.QPushButton(mw)
+        tempButton.clicked.connect(menu.aboutToShow)
+        tempButton.click()
+        tempButton.deleteLater()
+
+        toolbarList = []
+        menuActions = menu.actions()
+        for i in menuActions:
+            if i.isEnabled():
+                toolbarList.append(i.text())
+        return toolbarList
+
     def findDockWidget():
         mw = FreeCADGui.getMainWindow()
 
@@ -111,11 +205,14 @@ def guiUp():
 
     def tabWidget():
         widget = QtGui.QTabWidget()
+        widget.tabBar().setDrawBase(False)
         widget.setMovable(True)
         return widget
 
     tbTabs = tabWidget()
+    tbTabs.setSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Ignored)
     tbDock.setWidget(tbTabs)
+
     tbDockTitleBar = tbDock.titleBarWidget()
 
     def tabPrefGeneral():
@@ -229,10 +326,7 @@ def guiUp():
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
 
         menu = QtGui.QMenu()
-
-        # TEMP
-        menu.setStyleSheet("padding: 5px")
-        #
+        menu.setStyleSheet(quickMenuStyle)
 
         lockAction = QtGui.QAction(menu)
         lockAction.setIconText("Lock")
@@ -386,13 +480,21 @@ def guiUp():
             if i in wbList:
                 widget = QtGui.QWidget()
                 widget.setObjectName(i)
-
-                # TEMP
-                widget.setWindowTitle(wbList[i].MenuText)
-                btn = quickMenu()
-                btn.resize(32, 32)
-                btn.setParent(widget)
-                #
+                layout = FlowLayout.FlowLayout()
+                layout.setObjectName(i)
+                widget.setLayout(layout)
+                widget.setSizePolicy(QtGui.QSizePolicy.Ignored,
+                                     QtGui.QSizePolicy.Ignored)
+                scroll = QtGui.QScrollArea()
+                scroll.setStyleSheet(scrollStyle)
+                scroll.setObjectName(i)
+                scroll.setWindowTitle(wbList[i].MenuText)
+                scroll.setWidgetResizable(True)
+                scroll.setVerticalScrollBarPolicy((QtCore.Qt
+                                                  .ScrollBarAlwaysOff))
+                scroll.setHorizontalScrollBarPolicy((QtCore.Qt
+                                                    .ScrollBarAlwaysOff))
+                scroll.setWidget(widget)
 
                 try:
                     icon = wbIcon(wbList[i].Icon)
@@ -401,17 +503,99 @@ def guiUp():
 
                 if paramGet.GetString("TabStyle"):
                     if paramGet.GetString("TabStyle") == "Default":
-                        tbTabs.addTab(widget, icon, wbList[i].MenuText)
+                        tbTabs.addTab(scroll, icon, wbList[i].MenuText)
                     elif paramGet.GetString("TabStyle") == "Icon":
-                        tbTabs.addTab(widget, icon, "")
+                        tbTabs.addTab(scroll, icon, "")
                     elif paramGet.GetString("TabStyle") == "Text":
-                        tbTabs.addTab(widget, wbList[i].MenuText)
+                        tbTabs.addTab(scroll, wbList[i].MenuText)
                 else:
-                    tbTabs.addTab(widget, icon, wbList[i].MenuText)
+                    tbTabs.addTab(scroll, icon, wbList[i].MenuText)
 
-                tbTabs.setTabToolTip(tbTabs.indexOf(widget), wbList[i].ToolTip)
+                tbTabs.setTabToolTip(tbTabs.indexOf(scroll), wbList[i].ToolTip)
 
     addTabs()
+
+    def onTabChange():
+        mw = FreeCADGui.getMainWindow()
+        activeWB = Gui.activeWorkbench().name()
+        activeTab = tbTabs.currentWidget().objectName()
+
+        if activeWB == activeTab:
+            pass
+        else:
+            FreeCADGui.doCommand((str('Gui.activateWorkbench("'
+                                 + activeTab + '")')))
+
+        paramGen = App.ParamGet("User parameter:BaseApp/Preferences/General")
+
+        iconSize = paramGen.GetInt("ToolbarIconSize")
+
+        if not iconSize:
+            iconSize = 24
+
+        layout = []
+        for i in mw.findChildren(QtGui.QLayout):
+            if i.objectName() == activeTab:
+                layout = i
+
+        item = layout.takeAt(0)
+        while item:
+            item.widget().hide()
+            del item
+            item = layout.takeAt(0)
+
+        toolbarAll = {}
+        for i in mw.findChildren(QtGui.QToolBar):
+            toolbarAll[i.windowTitle()] = i
+
+        toolbarList = wbToolbars()
+
+        toolbarButtons = []
+        for a in toolbarList:
+            if a in toolbarAll:
+                for b in toolbarAll[a].findChildren(QtGui.QToolButton):
+                    try:
+                        if not b.defaultAction().isSeparator():
+                            toolbarButtons.append(b)
+                    except:
+                        pass
+
+        def buttonAdd(i):
+            if i.menu() is None:
+                toolButton = QtGui.QToolButton()
+                toolButton.setAutoRaise(i.autoRaise())
+                toolButton.setDefaultAction(i.defaultAction())
+                toolButton.setIconSize(QSize(iconSize, iconSize))
+                toolButton.installEventFilter((InstallEvent
+                                              .InstallEvent(toolButton)))
+                layout.addWidget(toolButton)
+
+                if i.defaultAction().menu() is None:
+                    pass
+                else:
+                    toolButton.setObjectName("menuButton")
+
+            else:
+                toolButton = QtGui.QToolButton()
+                toolButton.setObjectName("menuButton")
+                toolButton.setAutoRaise(i.autoRaise())
+                toolButton.setDefaultAction(i.defaultAction())
+                toolButton.setIconSize(QSize(iconSize, iconSize))
+                toolButton.installEventFilter((InstallEvent
+                                              .InstallEvent(toolButton)))
+                toolButton.setMenu(i.menu())
+                toolButton.setPopupMode(i.popupMode())
+                layout.addWidget(toolButton)
+
+        for i in toolbarButtons:
+            buttonAdd(i)
+
+        quickMenuButton = quickMenu()
+        quickMenuButton.setIconSize(QSize(iconSize, iconSize))
+
+        layout.addWidget(quickMenuButton)
+
+    tbTabs.currentChanged.connect(onTabChange)
 
     def afterStart():
         mw = FreeCADGui.getMainWindow()
@@ -436,11 +620,11 @@ def guiUp():
 
         activeWB = Gui.activeWorkbench().name()
 
-        # TEMP
-        for i in mw.findChildren(QtGui.QWidget):
-        #
+        for i in mw.findChildren(QtGui.QScrollArea):
             if i.objectName() == activeWB:
                 tbTabs.setCurrentIndex(tbTabs.indexOf(i))
+
+        onTabChange()
 
     afterStart()
 
