@@ -302,6 +302,243 @@ def guiUp():
 
         return widgetGeneral
 
+    def tabPrefToolbar():
+        mw = FreeCADGui.getMainWindow()
+        paramTBGet = App.ParamGet("User parameter:BaseApp/TabBar/Toolbars")
+
+        activeWBLabel = QtGui.QLabel()
+        menuText = Gui.activeWorkbench().MenuText
+        activeWBLabel.setText(menuText.decode("UTF-8"))
+        activeWBLabel.setWordWrap(1)
+        activeWBLabel.setFrameStyle(QtGui.QFrame.StyledPanel)
+
+        toolbarLocal = QtGui.QListWidget()
+        toolbarLocal.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+
+        def activeWBLabelText():
+            text = activeWBLabel.text()
+
+            wbList = FreeCADGui.listWorkbenches()
+
+            for i in wbList:
+                if wbList[i].MenuText == text:
+                    wbName = wbList[i].name()
+
+            return wbName
+
+        def toolbarListLocal():
+            activeWB = activeWBLabelText()
+
+            paramActiveWBGet = paramTBGet.GetString(activeWB)
+
+            if paramActiveWBGet:
+                paramActiveWBGet = paramActiveWBGet.split(".,.")
+            else:
+                paramActiveWBGet = []
+
+            paramTBOffGet = paramTBGet.GetString(activeWB + "-Off")
+
+            if paramTBOffGet:
+                paramTBOffGet = paramTBOffGet.split(".,.")
+            else:
+                paramTBOffGet = []
+
+            toolbarList = wbToolbars()
+
+            tbList = []
+            for i in mw.findChildren(QtGui.QToolBar):
+                if i.windowTitle() in toolbarList:
+                    tbList.append(i)
+
+            tbListObjectName = []
+            for i in tbList:
+                tbListObjectName.append(i.objectName())
+
+            toolbarList = tbListObjectName
+
+            for i in toolbarList:
+                if i not in paramActiveWBGet:
+                    paramActiveWBGet.append(i)
+                else:
+                    pass
+
+            tbListAll = {}
+            for i in mw.findChildren(QtGui.QToolBar):
+                tbListAll[i.objectName()] = i
+
+            toolbarLocal.blockSignals(True)
+
+            delItem = toolbarLocal.takeItem(0)
+            while delItem:
+                delItem = toolbarLocal.takeItem(0)
+
+            for i in paramActiveWBGet:
+                item = QtGui.QListWidgetItem(toolbarLocal)
+
+                if i in tbListObjectName:
+                    item.setData(QtCore.Qt.UserRole, i)
+
+                    for a in tbListAll:
+                        if tbListAll[a].objectName() == i:
+                            item.setText(tbListAll[a].windowTitle())
+                else:
+                    pass
+
+                item.setCheckState(QtCore.Qt.CheckState(2))
+
+            items = []
+            for index in xrange(toolbarLocal.count()):
+                items.append(toolbarLocal.item(index))
+
+            for i in items:
+                if i.data(QtCore.Qt.UserRole) in paramTBOffGet:
+                    i.setCheckState(QtCore.Qt.CheckState(0))
+                else:
+                    pass
+
+            toolbarLocal.blockSignals(False)
+
+        toolbarListLocal()
+
+        def onToolbarListLocal():
+            activeWB = activeWBLabelText()
+
+            items = []
+            for index in xrange(toolbarLocal.count()):
+                items.append(toolbarLocal.item(index))
+
+            checkList = []
+            for i in items:
+                if not i.checkState():
+                    checkList.append(i.data(QtCore.Qt.UserRole))
+                else:
+                    pass
+
+            paramTBGet.SetString(activeWB + "-Off", ".,.".join(checkList))
+
+            onTabChange()
+
+        toolbarLocal.itemChanged.connect(onToolbarListLocal)
+
+        buttonLeft = QtGui.QToolButton()
+        buttonLeft.setArrowType(QtCore.Qt.LeftArrow)
+
+        buttonRight = QtGui.QToolButton()
+        buttonRight.setArrowType(QtCore.Qt.RightArrow)
+
+        buttonUp = QtGui.QToolButton()
+        buttonUp.setArrowType(QtCore.Qt.ArrowType(1))
+
+        buttonDown = QtGui.QToolButton()
+        buttonDown.setArrowType(QtCore.Qt.DownArrow)
+
+        buttonLocalReset = QtGui.QPushButton(u'\u27F3')
+        buttonLocalReset.setMaximumSize(buttonUp.sizeHint())
+        buttonLocalReset.setAutoDefault(0)
+
+        def onButtonLeft():
+            tbTabs.setCurrentIndex(tbTabs.currentIndex() - 1)
+            activeWBLabel.setText(Gui.activeWorkbench().MenuText)
+            toolbarListLocal()
+
+        buttonLeft.clicked.connect(onButtonLeft)
+
+        def onButtonRight():
+            tbTabs.setCurrentIndex(tbTabs.currentIndex() + 1)
+            activeWBLabel.setText(Gui.activeWorkbench().MenuText)
+            toolbarListLocal()
+
+        buttonRight.clicked.connect(onButtonRight)
+
+        def onButtonUp():
+            activeWB = activeWBLabelText()
+
+            currentIndex = toolbarLocal.currentRow()
+
+            if currentIndex != 0:
+                currentItem = toolbarLocal.takeItem(currentIndex)
+                toolbarLocal.insertItem(currentIndex - 1, currentItem)
+                toolbarLocal.setCurrentRow(currentIndex - 1)
+
+                items = []
+                for index in xrange(toolbarLocal.count()):
+                    items.append(toolbarLocal.item(index))
+
+                toolbarData = []
+                for i in items:
+                    toolbarData.append(i.data(QtCore.Qt.UserRole))
+
+                paramTBGet.SetString(activeWB, ".,.".join(toolbarData))
+
+                onTabChange()
+            else:
+                pass
+
+        buttonUp.clicked.connect(onButtonUp)
+
+        def onButtonDown():
+            activeWB = activeWBLabelText()
+
+            currentIndex = toolbarLocal.currentRow()
+
+            if currentIndex != toolbarLocal.count() - 1:
+                currentItem = toolbarLocal.takeItem(currentIndex)
+                toolbarLocal.insertItem(currentIndex + 1, currentItem)
+                toolbarLocal.setCurrentRow(currentIndex + 1)
+
+                items = []
+                for index in xrange(toolbarLocal.count()):
+                    items.append(toolbarLocal.item(index))
+
+                toolbarData = []
+                for i in items:
+                    toolbarData.append(i.data(QtCore.Qt.UserRole))
+
+                paramTBGet.SetString(activeWB, ".,.".join(toolbarData))
+
+                onTabChange()
+            else:
+                pass
+
+        buttonDown.clicked.connect(onButtonDown)
+
+        def onButtonLocalReset():
+            activeWB = activeWBLabelText()
+
+            paramTBGet.RemString(activeWB)
+            paramTBGet.RemString(activeWB + "-Off")
+
+            toolbarListLocal()
+            onTabChange()
+
+        buttonLocalReset.clicked.connect(onButtonLocalReset)
+
+        paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+
+        layoutLabel = QtGui.QHBoxLayout()
+        layoutLabel.addWidget(activeWBLabel)
+        layoutLabel.addWidget(buttonLeft)
+        layoutLabel.addWidget(buttonRight)
+
+        layoutToolbarList = QtGui.QHBoxLayout()
+        layoutToolbarList.addWidget(toolbarLocal)
+
+        layoutButtons = QtGui.QHBoxLayout()
+        layoutButtons.addWidget(buttonLocalReset)
+        layoutButtons.addStretch(1)
+        layoutButtons.addWidget(buttonDown)
+        layoutButtons.addWidget(buttonUp)
+
+        layoutToolbar = QtGui.QVBoxLayout()
+        layoutToolbar.insertLayout(0, layoutLabel)
+        layoutToolbar.insertLayout(1, layoutToolbarList)
+        layoutToolbar.insertLayout(2, layoutButtons)
+
+        widgetToolbar = QtGui.QWidget()
+        widgetToolbar.setLayout(layoutToolbar)
+
+        return widgetToolbar
+
     def onControl():
         mw = FreeCADGui.getMainWindow()
 
@@ -321,6 +558,7 @@ def guiUp():
         tbPrefDialogLayout.addWidget(tbPrefTabs)
 
         tbPrefTabs.addTab(tabPrefGeneral(), "General")
+        tbPrefTabs.addTab(tabPrefToolbar(), "Toolbar")
 
     def quickMenu():
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
@@ -517,6 +755,9 @@ def guiUp():
 
     def onTabChange():
         mw = FreeCADGui.getMainWindow()
+        paramTBGet = App.ParamGet("User parameter:BaseApp/TabBar/Toolbars")
+        paramGen = App.ParamGet("User parameter:BaseApp/Preferences/General")
+
         activeWB = Gui.activeWorkbench().name()
         activeTab = tbTabs.currentWidget().objectName()
 
@@ -526,7 +767,8 @@ def guiUp():
             FreeCADGui.doCommand((str('Gui.activateWorkbench("'
                                  + activeTab + '")')))
 
-        paramGen = App.ParamGet("User parameter:BaseApp/Preferences/General")
+        activeWB = Gui.activeWorkbench().name()
+        activeTab = tbTabs.currentWidget().objectName()
 
         iconSize = paramGen.GetInt("ToolbarIconSize")
 
@@ -544,16 +786,45 @@ def guiUp():
             del item
             item = layout.takeAt(0)
 
+        toolbarList = wbToolbars()
+
         toolbarAll = {}
         for i in mw.findChildren(QtGui.QToolBar):
             toolbarAll[i.windowTitle()] = i
 
-        toolbarList = wbToolbars()
+        toolbarObjectNameList = []
+        for i in toolbarList:
+            if i in toolbarAll:
+                toolbarObjectNameList.append(toolbarAll[i].objectName())
+
+        toolbarSortedList = []
+        toolbarSortedList = paramTBGet.GetString(activeWB)
+        toolbarSortedList = toolbarSortedList.split(".,.")
+
+        for i in toolbarObjectNameList:
+            if i not in toolbarSortedList:
+                toolbarSortedList.append(i)
+            else:
+                pass
+
+        toolbarOffList = []
+        toolbarOffList = paramTBGet.GetString(activeWB + "-Off")
+        toolbarOffList = toolbarOffList.split(".,.")
+
+        for i in toolbarOffList:
+            if i in toolbarSortedList:
+                toolbarSortedList.remove(i)
+        else:
+            pass
+
+        tbObjectNameAll = {}
+        for i in mw.findChildren(QtGui.QToolBar):
+            tbObjectNameAll[i.objectName()] = i
 
         toolbarButtons = []
-        for a in toolbarList:
-            if a in toolbarAll:
-                for b in toolbarAll[a].findChildren(QtGui.QToolButton):
+        for a in toolbarSortedList:
+            if a in tbObjectNameAll:
+                for b in tbObjectNameAll[a].findChildren(QtGui.QToolButton):
                     try:
                         if not b.defaultAction().isSeparator():
                             toolbarButtons.append(b)
