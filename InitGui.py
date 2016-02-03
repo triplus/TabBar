@@ -95,6 +95,46 @@ def guiUp():
                     '                ',
                     '                ']
 
+    indicatorBlue = ['16 16 2 1',
+                     ' 	c None',
+                     '.	c #204A87',
+                     '                ',
+                     '                ',
+                     '                ',
+                     '                ',
+                     '    ........    ',
+                     '    ........    ',
+                     '    ........    ',
+                     '    ........    ',
+                     '    ........    ',
+                     '    ........    ',
+                     '    ........    ',
+                     '    ........    ',
+                     '                ',
+                     '                ',
+                     '                ',
+                     '                ']
+
+    indicatorGray = ['16 16 2 1',
+                     ' 	c None',
+                     '.	c #888A85',
+                     '                ',
+                     '                ',
+                     '                ',
+                     '                ',
+                     '    ........    ',
+                     '    ........    ',
+                     '    ........    ',
+                     '    ........    ',
+                     '    ........    ',
+                     '    ........    ',
+                     '    ........    ',
+                     '    ........    ',
+                     '                ',
+                     '                ',
+                     '                ',
+                     '                ']
+
     quickMenuStyle = ("padding: 5px")
 
     scrollStyle = ("""
@@ -377,12 +417,21 @@ def guiUp():
 
                 if i in tbListObjectName:
                     item.setData(QtCore.Qt.UserRole, i)
-
                     for a in tbListAll:
                         if tbListAll[a].objectName() == i:
                             item.setText(tbListAll[a].windowTitle())
+
+                elif i in tbListAll:
+                    item.setData(QtCore.Qt.UserRole, i)
+                    for a in tbListAll:
+                        if tbListAll[a].objectName() == i:
+                            item.setText(tbListAll[a].windowTitle())
+                    item.setIcon(QtGui.QIcon(QtGui.QPixmap(indicatorBlue)))
+
                 else:
-                    pass
+                    item.setData(QtCore.Qt.UserRole, i)
+                    item.setText(i)
+                    item.setIcon(QtGui.QIcon(QtGui.QPixmap(indicatorGray)))
 
                 item.setCheckState(QtCore.Qt.CheckState(2))
 
@@ -420,6 +469,113 @@ def guiUp():
 
         toolbarLocal.itemChanged.connect(onToolbarListLocal)
 
+        toolbarExternal = QtGui.QListWidget()
+        toolbarExternal.setSortingEnabled(True)
+        toolbarExternal.sortItems(QtCore.Qt.AscendingOrder)
+        toolbarExternal.setHorizontalScrollBarPolicy(QtCore
+                                                     .Qt.ScrollBarAlwaysOff)
+
+        def toolbarListExternal():
+            activeWB = activeWBLabelText()
+
+            toolbarList = wbToolbars()
+
+            tbList = []
+            for i in mw.findChildren(QtGui.QToolBar):
+                if i.windowTitle() not in toolbarList:
+                    tbList.append(i)
+                else:
+                    pass
+
+            paramTBExternalGet = paramTBGet.GetString(activeWB + "-External")
+
+            toolbarExternalList = []
+            if paramTBExternalGet:
+                toolbarExternalList = paramTBExternalGet.split(".,.")
+            else:
+                toolbarExternalList = []
+
+            toolbarExternal.blockSignals(True)
+
+            delItem = toolbarExternal.takeItem(0)
+            while delItem:
+                delItem = toolbarExternal.takeItem(0)
+
+            for i in tbList:
+                item = QtGui.QListWidgetItem(toolbarExternal)
+                item.setText(i.windowTitle())
+                item.setCheckState(QtCore.Qt.CheckState(0))
+                item.setData(QtCore.Qt.UserRole, i.objectName())
+                item.setIcon(QtGui.QIcon(QtGui.QPixmap(indicatorBlue)))
+
+            items = []
+            for index in xrange(toolbarExternal.count()):
+                items.append(toolbarExternal.item(index))
+
+            for i in items:
+                if i.data(QtCore.Qt.UserRole) in toolbarExternalList:
+                    i.setCheckState(QtCore.Qt.CheckState(2))
+                else:
+                    pass
+
+            toolbarExternal.blockSignals(False)
+
+        toolbarListExternal()
+
+        def onToolbarListExternal():
+            activeWB = activeWBLabelText()
+
+            items = []
+            for index in xrange(toolbarExternal.count()):
+                items.append(toolbarExternal.item(index))
+
+            checkListOn = []
+            checkListOff = []
+            for i in items:
+                if i.checkState():
+                    checkListOn.append(i.data(QtCore.Qt.UserRole))
+                else:
+                    checkListOff.append(i.data(QtCore.Qt.UserRole))
+
+            toolbarList = paramTBGet.GetString(activeWB)
+
+            if toolbarList:
+                toolbarList = toolbarList.split(".,.")
+            else:
+                toolbarList = wbToolbars()
+
+                tbList = []
+                for i in mw.findChildren(QtGui.QToolBar):
+                    if i.windowTitle() in toolbarList:
+                        tbList.append(i)
+
+                tbListObjectName = []
+                for i in tbList:
+                    tbListObjectName.append(i.objectName())
+
+                toolbarList = tbListObjectName
+
+            for i in checkListOn:
+                if i not in toolbarList:
+                    toolbarList.append(i)
+                else:
+                    pass
+
+            for i in checkListOff:
+                if i in toolbarList:
+                    toolbarList.remove(i)
+                else:
+                    pass
+
+            paramTBGet.SetString(activeWB, ".,.".join(toolbarList))
+            paramTBGet.SetString(activeWB + "-External",
+                                 ".,.".join(checkListOn))
+
+            toolbarListLocal()
+            onTabChange()
+
+        toolbarExternal.itemChanged.connect(onToolbarListExternal)
+
         buttonLeft = QtGui.QToolButton()
         buttonLeft.setArrowType(QtCore.Qt.LeftArrow)
 
@@ -436,10 +592,17 @@ def guiUp():
         buttonLocalReset.setMaximumSize(buttonUp.sizeHint())
         buttonLocalReset.setAutoDefault(0)
 
+        buttonExternalGetAll = QtGui.QPushButton(u'\u26C1')
+        buttonExternalGetAll.setMaximumSize(buttonUp.sizeHint())
+        buttonExternalGetAll.setAutoDefault(0)
+
+        toggleButton = QtGui.QToolButton()
+
         def onButtonLeft():
             tbTabs.setCurrentIndex(tbTabs.currentIndex() - 1)
             activeWBLabel.setText(Gui.activeWorkbench().MenuText)
             toolbarListLocal()
+            toolbarListExternal()
 
         buttonLeft.clicked.connect(onButtonLeft)
 
@@ -447,12 +610,12 @@ def guiUp():
             tbTabs.setCurrentIndex(tbTabs.currentIndex() + 1)
             activeWBLabel.setText(Gui.activeWorkbench().MenuText)
             toolbarListLocal()
+            toolbarListExternal()
 
         buttonRight.clicked.connect(onButtonRight)
 
         def onButtonUp():
             activeWB = activeWBLabelText()
-
             currentIndex = toolbarLocal.currentRow()
 
             if currentIndex != 0:
@@ -478,7 +641,6 @@ def guiUp():
 
         def onButtonDown():
             activeWB = activeWBLabelText()
-
             currentIndex = toolbarLocal.currentRow()
 
             if currentIndex != toolbarLocal.count() - 1:
@@ -507,13 +669,82 @@ def guiUp():
 
             paramTBGet.RemString(activeWB)
             paramTBGet.RemString(activeWB + "-Off")
+            paramTBGet.RemString(activeWB + "-External")
+
+            checkActiveWB = Gui.activeWorkbench().name()
+
+            if checkActiveWB != activeWB:
+                FreeCADGui.doCommand(str('Gui.activateWorkbench("'
+                                     + activeWB + '")'))
+                for i in mw.findChildren(QtGui.QScrollArea):
+                    if i.objectName() == activeWB:
+                        tbTabs.setCurrentIndex(tbTabs.indexOf(i))
+            else:
+                pass
 
             toolbarListLocal()
+            toolbarListExternal()
             onTabChange()
 
         buttonLocalReset.clicked.connect(onButtonLocalReset)
 
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+
+        def onButtonExternalGetAll():
+            activeWB = FreeCADGui.activeWorkbench().name()
+
+            progressBar = QtGui.QProgressBar(activeWBLabel)
+            progressBar.setMinimumSize(activeWBLabel.size())
+
+            progressBar.show()
+
+            wbList = []
+            for i in FreeCADGui.listWorkbenches():
+                wbList.append(i)
+
+            wbList.remove(activeWB)
+
+            progressBar.setMaximum(len(wbList))
+
+            n = 0
+            for i in wbList:
+                n = n + 1
+                progressBar.setValue(n)
+                FreeCADGui.activateWorkbench(i)
+
+            FreeCADGui.activateWorkbench(activeWB)
+
+            progressBar.hide()
+            progressBar.deleteLater()
+
+            toolbarListLocal()
+            toolbarListExternal()
+            onTabChange()
+
+        buttonExternalGetAll.clicked.connect(onButtonExternalGetAll)
+
+        def onToggleButton():
+            if toolbarExternal.isHidden():
+                toolbarExternal.show()
+                buttonExternalGetAll.show()
+                toggleButton.setArrowType(QtCore.Qt.RightArrow)
+                paramGet.SetBool("ToggleExternal", 1)
+            else:
+                toolbarExternal.hide()
+                buttonExternalGetAll.hide()
+                toggleButton.setArrowType(QtCore.Qt.LeftArrow)
+                paramGet.SetBool("ToggleExternal", 0)
+
+        toggleButton.clicked.connect(onToggleButton)
+
+        if paramGet.GetBool("ToggleExternal"):
+            toolbarExternal.show()
+            buttonExternalGetAll.show()
+            toggleButton.setArrowType(QtCore.Qt.RightArrow)
+        else:
+            toolbarExternal.hide()
+            buttonExternalGetAll.hide()
+            toggleButton.setArrowType(QtCore.Qt.LeftArrow)
 
         layoutLabel = QtGui.QHBoxLayout()
         layoutLabel.addWidget(activeWBLabel)
@@ -522,12 +753,15 @@ def guiUp():
 
         layoutToolbarList = QtGui.QHBoxLayout()
         layoutToolbarList.addWidget(toolbarLocal)
+        layoutToolbarList.addWidget(toolbarExternal)
 
         layoutButtons = QtGui.QHBoxLayout()
         layoutButtons.addWidget(buttonLocalReset)
-        layoutButtons.addStretch(1)
         layoutButtons.addWidget(buttonDown)
         layoutButtons.addWidget(buttonUp)
+        layoutButtons.addStretch(1)
+        layoutButtons.addWidget(buttonExternalGetAll)
+        layoutButtons.addWidget(toggleButton)
 
         layoutToolbar = QtGui.QVBoxLayout()
         layoutToolbar.insertLayout(0, layoutLabel)
