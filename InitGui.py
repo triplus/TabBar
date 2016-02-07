@@ -773,6 +773,86 @@ def guiUp():
 
         return widgetToolbar
 
+    def tabPrefAutoload():
+        wbList = QtGui.QListWidget()
+        wbList.setSortingEnabled(True)
+        wbList.sortItems(QtCore.Qt.AscendingOrder)
+        paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+        wbList.setHorizontalScrollBarPolicy(QtCore
+                                            .Qt.ScrollBarAlwaysOff)
+
+        paramGenGet = App.ParamGet("User parameter"
+                                   ":BaseApp/Preferences/General")
+
+        autoLoadModule = paramGenGet.GetString("AutoloadModule")
+
+        if not autoLoadModule:
+            autoLoadModule = "StartWorkbench"
+        else:
+            pass
+
+        def workbenchList():
+            listWorkbenches = FreeCADGui.listWorkbenches()
+
+            for i in listWorkbenches:
+                item = QtGui.QListWidgetItem(wbList)
+
+                if i == autoLoadModule:
+                    item.setFlags(QtCore.Qt.ItemIsSelectable)
+                    item.setText(listWorkbenches[i].MenuText)
+                    item.setCheckState(QtCore.Qt.CheckState(2))
+                    item.setIcon(QtGui.QIcon(QtGui.QPixmap(indicatorGray)))
+                else:
+                    item.setFlags(item.flags())
+                    item.setText(listWorkbenches[i].MenuText)
+                    item.setCheckState(QtCore.Qt.CheckState(0))
+
+            modulesList = (paramGet.GetString("LoadModules")).split(",")
+
+            autoLoad = []
+            for i in modulesList:
+                if i in listWorkbenches:
+                    autoLoad.append(listWorkbenches[i].MenuText)
+
+            item = []
+            for i in xrange(wbList.count()):
+                item.append(wbList.item(i))
+
+            for i in item:
+                if i.text() in autoLoad:
+                    i.setCheckState(QtCore.Qt.CheckState(2))
+
+        workbenchList()
+
+        def onWorkbenchList():
+            listWorkbenches = FreeCADGui.listWorkbenches()
+
+            item = []
+            for i in xrange(wbList.count()):
+                item.append(wbList.item(i))
+
+            checkList = []
+            for i in item:
+                if i.checkState():
+                    checkList.append(i.text())
+
+            autoLoad = []
+            for i in listWorkbenches:
+                if listWorkbenches[i].MenuText in checkList:
+                    autoLoad.append(i)
+
+            paramGet.SetString("LoadModules", ",".join(autoLoad))
+
+        wbList.itemChanged.connect(onWorkbenchList)
+
+        layoutAutoload = QtGui.QVBoxLayout()
+        layoutAutoload.addWidget(wbList)
+
+        widgetAutoload = QtGui.QWidget()
+        widgetAutoload.setLayout(layoutAutoload)
+
+        return widgetAutoload
+
     def onControl():
         mw = FreeCADGui.getMainWindow()
 
@@ -793,6 +873,7 @@ def guiUp():
 
         tbPrefTabs.addTab(tabPrefGeneral(), "General")
         tbPrefTabs.addTab(tabPrefToolbar(), "Toolbar")
+        tbPrefTabs.addTab(tabPrefAutoload(), "Autoload")
 
     def quickMenu():
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
@@ -1122,6 +1203,32 @@ def guiUp():
             tbDock.setTitleBarWidget(QtGui.QWidget(None))
         else:
             tbDock.setTitleBarWidget(tbDockTitleBar)
+
+        def autoloadModules():
+            listWorkbenches = FreeCADGui.listWorkbenches()
+            modulesList = (paramGet.GetString("LoadModules")).split(",")
+
+            paramGenGet = App.ParamGet("User parameter"
+                                       ":BaseApp/Preferences/General")
+
+            autoLoadModule = paramGenGet.GetString("AutoloadModule")
+
+            if not autoLoadModule:
+                autoLoadModule = "StartWorkbench"
+            else:
+                pass
+
+            if autoLoadModule in modulesList:
+                modulesList.remove(autoLoadModule)
+
+            for i in modulesList:
+                if i in listWorkbenches:
+                    Gui.activateWorkbench(i)
+
+            if autoLoadModule in listWorkbenches:
+                Gui.activateWorkbench(autoLoadModule)
+
+        autoloadModules()
 
         activeWB = Gui.activeWorkbench().name()
 
