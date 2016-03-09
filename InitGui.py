@@ -251,7 +251,13 @@ def guiUp():
 
     tbTabs = tabWidget()
     tbTabs.setSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Ignored)
-    tbDock.setWidget(tbTabs)
+
+    tbDockWidget = QtGui.QWidget()
+    tbDockWidgetLayout = QtGui.QVBoxLayout()
+    tbDockWidgetLayout.setContentsMargins(0, 0, 0, 0)
+    tbDockWidget.setLayout(tbDockWidgetLayout)
+    tbDockWidgetLayout.addWidget(tbTabs)
+    tbDock.setWidget(tbDockWidget)
 
     tbDockTitleBar = tbDock.titleBarWidget()
 
@@ -355,6 +361,18 @@ def guiUp():
         toolbarLocal = QtGui.QListWidget()
         toolbarLocal.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
 
+        def setActiveWB(activeWB):
+            checkActiveWB = FreeCADGui.activeWorkbench().name()
+
+            if checkActiveWB != activeWB:
+                FreeCADGui.doCommand(str('Gui.activateWorkbench("'
+                                     + activeWB + '")'))
+                for i in mw.findChildren(QtGui.QScrollArea):
+                    if i.objectName() == activeWB:
+                        tbTabs.setCurrentIndex(tbTabs.indexOf(i))
+            else:
+                pass
+
         def activeWBLabelText():
             text = activeWBLabel.text()
 
@@ -368,6 +386,7 @@ def guiUp():
 
         def toolbarListLocal():
             activeWB = activeWBLabelText()
+            setActiveWB(activeWB)
 
             paramActiveWBGet = paramTBGet.GetString(activeWB)
 
@@ -477,6 +496,7 @@ def guiUp():
 
         def toolbarListExternal():
             activeWB = activeWBLabelText()
+            setActiveWB(activeWB)
 
             toolbarList = wbToolbars()
 
@@ -524,6 +544,7 @@ def guiUp():
 
         def onToolbarListExternal():
             activeWB = activeWBLabelText()
+            setActiveWB(activeWB)
 
             items = []
             for index in xrange(toolbarExternal.count()):
@@ -600,7 +621,8 @@ def guiUp():
 
         def onButtonLeft():
             tbTabs.setCurrentIndex(tbTabs.currentIndex() - 1)
-            activeWBLabel.setText(Gui.activeWorkbench().MenuText)
+            menuText = Gui.activeWorkbench().MenuText
+            activeWBLabel.setText(menuText.decode("UTF-8"))
             toolbarListLocal()
             toolbarListExternal()
 
@@ -608,7 +630,8 @@ def guiUp():
 
         def onButtonRight():
             tbTabs.setCurrentIndex(tbTabs.currentIndex() + 1)
-            activeWBLabel.setText(Gui.activeWorkbench().MenuText)
+            menuText = Gui.activeWorkbench().MenuText
+            activeWBLabel.setText(menuText.decode("UTF-8"))
             toolbarListLocal()
             toolbarListExternal()
 
@@ -666,21 +689,11 @@ def guiUp():
 
         def onButtonLocalReset():
             activeWB = activeWBLabelText()
+            setActiveWB(activeWB)
 
             paramTBGet.RemString(activeWB)
             paramTBGet.RemString(activeWB + "-Off")
             paramTBGet.RemString(activeWB + "-External")
-
-            checkActiveWB = Gui.activeWorkbench().name()
-
-            if checkActiveWB != activeWB:
-                FreeCADGui.doCommand(str('Gui.activateWorkbench("'
-                                     + activeWB + '")'))
-                for i in mw.findChildren(QtGui.QScrollArea):
-                    if i.objectName() == activeWB:
-                        tbTabs.setCurrentIndex(tbTabs.indexOf(i))
-            else:
-                pass
 
             toolbarListLocal()
             toolbarListExternal()
