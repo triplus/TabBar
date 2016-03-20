@@ -189,6 +189,16 @@ def guiUp():
         }
         """)
 
+    def getSelectorActionGroup():
+        mw = FreeCADGui.getMainWindow()
+        for i in mw.findChildren(QtGui.QAction):
+            if i.objectName() == "NoneWorkbench":
+                actionGroup = i.parent()
+
+        return actionGroup
+
+    selectorActionGroup = getSelectorActionGroup()
+
     def xpmParse(i):
         icon = []
         for a in ((((i
@@ -254,7 +264,7 @@ def guiUp():
 
     tbDockWidget = QtGui.QWidget()
     tbDockWidgetLayout = QtGui.QVBoxLayout()
-    tbDockWidgetLayout.setContentsMargins(0, 0, 0, 0)
+    tbDockWidgetLayout.setContentsMargins(0, 1, 0, 0)
     tbDockWidget.setLayout(tbDockWidgetLayout)
     tbDockWidgetLayout.addWidget(tbTabs)
     tbDock.setWidget(tbDockWidget)
@@ -380,7 +390,7 @@ def guiUp():
 
             for i in wbList:
                 if wbList[i].MenuText == text:
-                    wbName = wbList[i].name()
+                    wbName = i
 
             return wbName
 
@@ -597,6 +607,50 @@ def guiUp():
 
         toolbarExternal.itemChanged.connect(onToolbarListExternal)
 
+        selectorButton = QtGui.QToolButton()
+        selectorButton.setAutoRaise(True)
+        selectorButton.setPopupMode(QtGui.QToolButton
+                                    .ToolButtonPopupMode.MenuButtonPopup)
+        selectorMenu = QtGui.QMenu()
+        selectorButton.setMenu(selectorMenu)
+        selectorList = sorted(FreeCADGui.listWorkbenches())
+
+        selectorActions = {}
+        for i in selectorActionGroup.actions():
+            selectorActions[i.objectName()] = i
+
+        selectorGroup = QtGui.QActionGroup(selectorMenu)
+
+        defaultAction = QtGui.QAction(selectorMenu)
+        selectorButton.setDefaultAction(defaultAction)
+
+        def onSelectorGroup():
+            menuText = selectorGroup.checkedAction().text()
+            activeWBLabel.setText(menuText.decode("UTF-8"))
+            defaultAction.setIcon(selectorGroup.checkedAction().icon())
+            toolbarListLocal()
+            toolbarListExternal()
+
+        for i in selectorList:
+            if i in selectorActions:
+                selectorAction = QtGui.QAction(selectorMenu)
+                selectorGroup.addAction(selectorAction)
+                selectorAction.setIcon(selectorActions[i].icon())
+                selectorAction.setText(selectorActions[i].text())
+                selectorAction.setObjectName(selectorActions[i].objectName())
+                selectorAction.setCheckable(True)
+                selectorMenu.addAction(selectorAction)
+                if selectorActions[i].isChecked():
+                    selectorAction.setChecked(True)
+                    defaultAction.setIcon(selectorGroup.checkedAction().icon())
+                    selectorButton.setDefaultAction(defaultAction)
+                else:
+                    pass
+            else:
+                pass
+
+        selectorGroup.triggered.connect(onSelectorGroup)
+
         buttonLeft = QtGui.QToolButton()
         buttonLeft.setArrowType(QtCore.Qt.LeftArrow)
 
@@ -609,13 +663,11 @@ def guiUp():
         buttonDown = QtGui.QToolButton()
         buttonDown.setArrowType(QtCore.Qt.DownArrow)
 
-        buttonLocalReset = QtGui.QPushButton(u'\u27F3')
-        buttonLocalReset.setMaximumSize(buttonUp.sizeHint())
-        buttonLocalReset.setAutoDefault(0)
+        buttonLocalReset = QtGui.QToolButton()
+        buttonLocalReset.setText(u'\u27F3')
 
-        buttonExternalGetAll = QtGui.QPushButton(u'\u26C1')
-        buttonExternalGetAll.setMaximumSize(buttonUp.sizeHint())
-        buttonExternalGetAll.setAutoDefault(0)
+        buttonExternalGetAll = QtGui.QToolButton()
+        buttonExternalGetAll.setText(u'\u26C1')
 
         toggleButton = QtGui.QToolButton()
 
@@ -625,6 +677,12 @@ def guiUp():
             activeWBLabel.setText(menuText.decode("UTF-8"))
             toolbarListLocal()
             toolbarListExternal()
+            for i in selectorGroup.actions():
+                if i.text() == menuText:
+                    i.setChecked(True)
+                    onSelectorGroup()
+                else:
+                    pass
 
         buttonLeft.clicked.connect(onButtonLeft)
 
@@ -634,6 +692,12 @@ def guiUp():
             activeWBLabel.setText(menuText.decode("UTF-8"))
             toolbarListLocal()
             toolbarListExternal()
+            for i in selectorGroup.actions():
+                if i.text() == menuText:
+                    i.setChecked(True)
+                    onSelectorGroup()
+                else:
+                    pass
 
         buttonRight.clicked.connect(onButtonRight)
 
@@ -761,6 +825,7 @@ def guiUp():
 
         layoutLabel = QtGui.QHBoxLayout()
         layoutLabel.addWidget(activeWBLabel)
+        layoutLabel.addWidget(selectorButton)
         layoutLabel.addWidget(buttonLeft)
         layoutLabel.addWidget(buttonRight)
 
@@ -788,6 +853,7 @@ def guiUp():
 
     def tabPrefAutoload():
         wbList = QtGui.QListWidget()
+        wbList.setIconSize(QtCore.QSize(20, 20))
         wbList.setSortingEnabled(True)
         wbList.sortItems(QtCore.Qt.AscendingOrder)
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
@@ -810,11 +876,17 @@ def guiUp():
             for i in listWorkbenches:
                 item = QtGui.QListWidgetItem(wbList)
 
+                try:
+                    icon = wbIcon(listWorkbenches[i].Icon)
+                except:
+                    icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
+
+                item.setIcon(icon)
+
                 if i == autoLoadModule:
                     item.setFlags(QtCore.Qt.ItemIsSelectable)
                     item.setText(listWorkbenches[i].MenuText)
                     item.setCheckState(QtCore.Qt.CheckState(2))
-                    item.setIcon(QtGui.QIcon(QtGui.QPixmap(indicatorGray)))
                 else:
                     item.setFlags(item.flags())
                     item.setText(listWorkbenches[i].MenuText)
@@ -1103,7 +1175,6 @@ def guiUp():
         if not iconSize:
             iconSize = 24
 
-        layout = []
         for i in mw.findChildren(QtGui.QLayout):
             if i.objectName() == activeTab:
                 layout = i
@@ -1142,8 +1213,8 @@ def guiUp():
         for i in toolbarOffList:
             if i in toolbarSortedList:
                 toolbarSortedList.remove(i)
-        else:
-            pass
+            else:
+                pass
 
         tbObjectNameAll = {}
         for i in mw.findChildren(QtGui.QToolBar):
