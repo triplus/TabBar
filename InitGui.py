@@ -189,15 +189,15 @@ def guiUp():
         }
         """)
 
-    def getSelectorActionGroup():
-        mw = FreeCADGui.getMainWindow()
-        for i in mw.findChildren(QtGui.QAction):
-            if i.objectName() == "NoneWorkbench":
-                actionGroup = i.parent()
+    #def getSelectorActionGroup():
+    #    mw = FreeCADGui.getMainWindow()
+    #    for i in mw.findChildren(QtGui.QAction):
+    #        if i.objectName() == "NoneWorkbench":
+    #            actionGroup = i.parent()
 
-        return actionGroup
+    #    return actionGroup
 
-    selectorActionGroup = getSelectorActionGroup()
+    #selectorActionGroup = getSelectorActionGroup()
 
     def xpmParse(i):
         icon = []
@@ -616,7 +616,8 @@ def guiUp():
         selectorList = sorted(FreeCADGui.listWorkbenches())
 
         selectorActions = {}
-        for i in selectorActionGroup.actions():
+        #for i in selectorActionGroup.actions():
+        for i in mw.findChildren(QtGui.QAction):
             selectorActions[i.objectName()] = i
 
         selectorGroup = QtGui.QActionGroup(selectorMenu)
