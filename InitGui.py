@@ -50,7 +50,6 @@ dockWidget()
 def guiUp():
     from PySide import QtCore
     from PySide import QtGui
-    from PySide.QtCore import QSize
     import FlowLayout
     import InstallEvent
 
@@ -189,15 +188,81 @@ def guiUp():
         }
         """)
 
-    #def getSelectorActionGroup():
-    #    mw = FreeCADGui.getMainWindow()
-    #    for i in mw.findChildren(QtGui.QAction):
-    #        if i.objectName() == "NoneWorkbench":
-    #            actionGroup = i.parent()
+    def beforeStart():
+        paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+        paramGet.RemBool("AddRemove")
 
-    #    return actionGroup
+    beforeStart()
 
-    #selectorActionGroup = getSelectorActionGroup()
+    def getSelectorActionGroup():
+        mw = FreeCADGui.getMainWindow()
+        paramGeneralGet = App.ParamGet("User parameter:BaseApp/Workbenches")
+
+        actionList = {}
+        for i in mw.findChildren(QtGui.QAction):
+            actionList[i.objectName()] = i
+
+        actionGroup = None
+
+        if "NoneWorkbench" in actionList:
+            actionGroup = actionList["NoneWorkbench"].parent()
+        else:
+            if paramGeneralGet.GetString("Enabled"):
+                enabledList = (((paramGeneralGet.GetString("Enabled"))
+                               .rsplit(',', 1)[0])
+                               .split(","))
+            else:
+                enabledList = []
+
+            tempActionList = []
+
+            for i in mw.findChildren(QtGui.QAction):
+                if i.objectName() in enabledList:
+                    tempActionList.append(i)
+                else:
+                    pass
+
+            actionGroup = tempActionList[0].parent()
+
+        if actionGroup is None:
+            actionGroup = QtGui.QActionGroup(mw)
+        else:
+            pass
+
+        return actionGroup
+
+    selectorActionGroup = getSelectorActionGroup()
+
+    def getSelectorActionGroupAll():
+        mw = FreeCADGui.getMainWindow()
+
+        wbList = FreeCADGui.listWorkbenches()
+        wbListSorted = sorted(wbList)
+
+        selectorActionGroupAll = QtGui.QActionGroup(mw)
+
+        for i in wbList:
+            action = QtGui.QAction(selectorActionGroupAll)
+            action.setObjectName(i)
+            action.setCheckable(True)
+            action.setText(wbList[i].MenuText)
+
+            try:
+                icon = wbIcon(wbList[i].Icon)
+            except:
+                icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
+
+            action.setIcon(icon)
+
+        activeWB = FreeCADGui.activeWorkbench().name()
+
+        for i in selectorActionGroupAll.actions():
+            if i.objectName() == activeWB:
+                i.setChecked(True)
+            else:
+                pass
+
+        return selectorActionGroupAll
 
     def xpmParse(i):
         icon = []
@@ -218,7 +283,7 @@ def guiUp():
         else:
             icon = QtGui.QIcon(QtGui.QPixmap(i))
 
-        if icon.pixmap(QSize(16, 16)).isNull():
+        if icon.pixmap(QtCore.QSize(16, 16)).isNull():
             icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
         else:
             pass
@@ -375,11 +440,7 @@ def guiUp():
             checkActiveWB = FreeCADGui.activeWorkbench().name()
 
             if checkActiveWB != activeWB:
-                FreeCADGui.doCommand(str('Gui.activateWorkbench("'
-                                     + activeWB + '")'))
-                for i in mw.findChildren(QtGui.QScrollArea):
-                    if i.objectName() == activeWB:
-                        tbTabs.setCurrentIndex(tbTabs.indexOf(i))
+                onSelector(activeWB)
             else:
                 pass
 
@@ -494,7 +555,7 @@ def guiUp():
 
             paramTBGet.SetString(activeWB + "-Off", ".,.".join(checkList))
 
-            onTabChange()
+            onSelector(activeWB)
 
         toolbarLocal.itemChanged.connect(onToolbarListLocal)
 
@@ -603,7 +664,7 @@ def guiUp():
                                  ".,.".join(checkListOn))
 
             toolbarListLocal()
-            onTabChange()
+            onSelector(activeWB)
 
         toolbarExternal.itemChanged.connect(onToolbarListExternal)
 
@@ -616,8 +677,7 @@ def guiUp():
         selectorList = sorted(FreeCADGui.listWorkbenches())
 
         selectorActions = {}
-        #for i in selectorActionGroup.actions():
-        for i in mw.findChildren(QtGui.QAction):
+        for i in getSelectorActionGroupAll().actions():
             selectorActions[i.objectName()] = i
 
         selectorGroup = QtGui.QActionGroup(selectorMenu)
@@ -625,17 +685,9 @@ def guiUp():
         defaultAction = QtGui.QAction(selectorMenu)
         selectorButton.setDefaultAction(defaultAction)
 
-        def onSelectorGroup():
-            menuText = selectorGroup.checkedAction().text()
-            activeWBLabel.setText(menuText.decode("UTF-8"))
-            defaultAction.setIcon(selectorGroup.checkedAction().icon())
-            toolbarListLocal()
-            toolbarListExternal()
-
         for i in selectorList:
             if i in selectorActions:
-                selectorAction = QtGui.QAction(selectorMenu)
-                selectorGroup.addAction(selectorAction)
+                selectorAction = QtGui.QAction(selectorGroup)
                 selectorAction.setIcon(selectorActions[i].icon())
                 selectorAction.setText(selectorActions[i].text())
                 selectorAction.setObjectName(selectorActions[i].objectName())
@@ -649,6 +701,13 @@ def guiUp():
                     pass
             else:
                 pass
+
+        def onSelectorGroup():
+            menuText = selectorGroup.checkedAction().text()
+            activeWBLabel.setText(menuText.decode("UTF-8"))
+            defaultAction.setIcon(selectorGroup.checkedAction().icon())
+            toolbarListLocal()
+            toolbarListExternal()
 
         selectorGroup.triggered.connect(onSelectorGroup)
 
@@ -670,7 +729,7 @@ def guiUp():
         buttonExternalGetAll = QtGui.QToolButton()
         buttonExternalGetAll.setText(u'\u26C1')
 
-        toggleButton = QtGui.QToolButton()
+        buttonSelectorToggle = QtGui.QToolButton()
 
         def onButtonLeft():
             tbTabs.setCurrentIndex(tbTabs.currentIndex() - 1)
@@ -721,7 +780,7 @@ def guiUp():
 
                 paramTBGet.SetString(activeWB, ".,.".join(toolbarData))
 
-                onTabChange()
+                onSelector(activeWB)
             else:
                 pass
 
@@ -746,7 +805,7 @@ def guiUp():
 
                 paramTBGet.SetString(activeWB, ".,.".join(toolbarData))
 
-                onTabChange()
+                onSelector(activeWB)
             else:
                 pass
 
@@ -762,7 +821,7 @@ def guiUp():
 
             toolbarListLocal()
             toolbarListExternal()
-            onTabChange()
+            onSelector(activeWB)
 
         buttonLocalReset.clicked.connect(onButtonLocalReset)
 
@@ -797,7 +856,7 @@ def guiUp():
 
             toolbarListLocal()
             toolbarListExternal()
-            onTabChange()
+            onSelector(activeWB)
 
         buttonExternalGetAll.clicked.connect(onButtonExternalGetAll)
 
@@ -805,24 +864,22 @@ def guiUp():
             if toolbarExternal.isHidden():
                 toolbarExternal.show()
                 buttonExternalGetAll.show()
-                toggleButton.setArrowType(QtCore.Qt.RightArrow)
+                buttonSelectorToggle.setArrowType(QtCore.Qt.RightArrow)
                 paramGet.SetBool("ToggleExternal", 1)
             else:
                 toolbarExternal.hide()
                 buttonExternalGetAll.hide()
-                toggleButton.setArrowType(QtCore.Qt.LeftArrow)
+                buttonSelectorToggle.setArrowType(QtCore.Qt.LeftArrow)
                 paramGet.SetBool("ToggleExternal", 0)
 
-        toggleButton.clicked.connect(onToggleButton)
+        buttonSelectorToggle.clicked.connect(onToggleButton)
 
         if paramGet.GetBool("ToggleExternal"):
-            toolbarExternal.show()
-            buttonExternalGetAll.show()
-            toggleButton.setArrowType(QtCore.Qt.RightArrow)
+            buttonSelectorToggle.setArrowType(QtCore.Qt.RightArrow)
         else:
             toolbarExternal.hide()
             buttonExternalGetAll.hide()
-            toggleButton.setArrowType(QtCore.Qt.LeftArrow)
+            buttonSelectorToggle.setArrowType(QtCore.Qt.LeftArrow)
 
         layoutLabel = QtGui.QHBoxLayout()
         layoutLabel.addWidget(activeWBLabel)
@@ -840,7 +897,7 @@ def guiUp():
         layoutButtons.addWidget(buttonUp)
         layoutButtons.addStretch(1)
         layoutButtons.addWidget(buttonExternalGetAll)
-        layoutButtons.addWidget(toggleButton)
+        layoutButtons.addWidget(buttonSelectorToggle)
 
         layoutToolbar = QtGui.QVBoxLayout()
         layoutToolbar.insertLayout(0, layoutLabel)
@@ -851,6 +908,305 @@ def guiUp():
         widgetToolbar.setLayout(layoutToolbar)
 
         return widgetToolbar
+
+    def tabPrefSelector():
+        mw = FreeCADGui.getMainWindow()
+        paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+        paramGeneralGet = App.ParamGet("User parameter:BaseApp/Workbenches")
+
+        selectorList = QtGui.QListWidget()
+        selectorList.setIconSize(QtCore.QSize(20, 20))
+        selectorList.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+
+        def makeSelectorList():
+            selectorList.blockSignals(True)
+            selectorList.setSortingEnabled(False)
+
+            def addItem(a, b):
+
+                listOff = paramGet.GetString("SelectorList-Off")
+                listOff = listOff.split(".,.")
+
+                item = QtGui.QListWidgetItem(selectorList)
+                item.setText(a.MenuText)
+                item.setData(QtCore.Qt.UserRole, b)
+
+                if paramGet.GetString("SelectorMode") == "Custom":
+                    if b in listOff:
+                        item.setCheckState(QtCore.Qt.CheckState(0))
+                    else:
+                        item.setCheckState(QtCore.Qt.CheckState(2))
+                else:
+                    item.setFlags(QtCore.Qt.ItemIsSelectable)
+                    item.setCheckState(QtCore.Qt.CheckState(2))
+
+                try:
+                    icon = wbIcon(a.Icon)
+                except:
+                    icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
+
+                item.setIcon(icon)
+
+            def sortedList():
+                selectorList.clear()
+
+                wbList = FreeCADGui.listWorkbenches()
+                selectorList.setSortingEnabled(True)
+                selectorList.sortItems(QtCore.Qt.AscendingOrder)
+
+                for i in wbList:
+                    addItem(wbList[i], i)
+
+            if paramGet.GetString("SelectorMode") == "Default":
+                if paramGeneralGet.GetString("Enabled"):
+                    listEnabled = (((paramGeneralGet.GetString("Enabled"))
+                                   .rsplit(',', 1)[0])
+                                   .split(","))
+
+                    tempWBList = FreeCADGui.listWorkbenches()
+
+                    selectorList.clear()
+
+                    for i in listEnabled:
+                        if i in tempWBList:
+                            addItem(tempWBList[i], i)
+                        else:
+                            pass
+
+                else:
+                    wbList = sortedList()
+
+            elif paramGet.GetString("SelectorMode") == "Custom":
+                if paramGet.GetString("SelectorList"):
+                    listCustom = paramGet.GetString("SelectorList")
+                    listCustom = listCustom.split(".,.")
+
+                    tempWBList = FreeCADGui.listWorkbenches()
+
+                    selectorList.clear()
+
+                    for i in listCustom:
+                        if i in tempWBList:
+                            addItem(tempWBList[i], i)
+                        else:
+                            pass
+
+                else:
+                    sortedList()
+            else:
+                sortedList()
+
+            selectorList.blockSignals(False)
+
+        def onMakeSelectorList():
+            activeWB = FreeCADGui.activeWorkbench().name()
+
+            items = []
+            for index in xrange(selectorList.count()):
+                items.append(selectorList.item(index))
+
+            checkListOff = []
+            for i in items:
+                if not i.checkState():
+                    checkListOff.append(i.data(QtCore.Qt.UserRole))
+                else:
+                    pass
+
+            if checkListOff:
+                data = ".,.".join(checkListOff)
+                paramGet.SetString("SelectorList-Off", data)
+            else:
+                pass
+
+            tbTabs.blockSignals(True)
+            tbTabs.clear()
+            tbTabs.blockSignals(False)
+
+            onSelector(activeWB, mode=1)
+
+        selectorList.itemChanged.connect(onMakeSelectorList)
+
+        selectorModeGroup = QtGui.QGroupBox("Mode:")
+
+        radioSelectorDefault = QtGui.QRadioButton("Default")
+        radioSelectorCustom = QtGui.QRadioButton("Custom")
+
+        buttonSelectorUp = QtGui.QToolButton()
+        buttonSelectorUp.setArrowType(QtCore.Qt.ArrowType(1))
+
+        buttonSelectorDown = QtGui.QToolButton()
+        buttonSelectorDown.setArrowType(QtCore.Qt.DownArrow)
+
+        buttonSelectorReset = QtGui.QToolButton()
+        buttonSelectorReset.setText(u'\u27F3')
+
+        buttonSelectorToggle = QtGui.QToolButton()
+
+        def onRadioSelectorDefault():
+            activeWB = FreeCADGui.activeWorkbench().name()
+
+            buttonSelectorUp.setEnabled(False)
+            buttonSelectorDown.setEnabled(False)
+            buttonSelectorReset.setEnabled(False)
+
+            paramGet.SetString("SelectorMode", "Default")
+
+            tbTabs.blockSignals(True)
+            tbTabs.clear()
+            tbTabs.blockSignals(False)
+
+            makeSelectorList()
+
+            onSelector(activeWB, mode=1)
+
+        radioSelectorDefault.clicked.connect(onRadioSelectorDefault)
+
+        def onRadioSelectorCustom():
+            activeWB = FreeCADGui.activeWorkbench().name()
+
+            buttonSelectorUp.setEnabled(True)
+            buttonSelectorDown.setEnabled(True)
+            buttonSelectorReset.setEnabled(True)
+
+            paramGet.SetString("SelectorMode", "Custom")
+
+            tbTabs.blockSignals(True)
+            tbTabs.clear()
+            tbTabs.blockSignals(False)
+
+            makeSelectorList()
+
+            onSelector(activeWB, mode=1)
+
+        radioSelectorCustom.clicked.connect(onRadioSelectorCustom)
+
+        def onButtonSelectorUp():
+            activeWB = FreeCADGui.activeWorkbench().name()
+            currentIndex = selectorList.currentRow()
+
+            selectorList.setSortingEnabled(False)
+            if currentIndex != 0:
+                currentItem = selectorList.takeItem(currentIndex)
+                selectorList.insertItem(currentIndex - 1, currentItem)
+                selectorList.setCurrentRow(currentIndex - 1)
+
+                items = []
+                for index in xrange(selectorList.count()):
+                    items.append(selectorList.item(index))
+
+                selectorListData = []
+                for i in items:
+                    selectorListData.append(i.data(QtCore.Qt.UserRole))
+
+                data = ".,.".join(selectorListData)
+                paramGet.SetString("SelectorList", data)
+
+                tbTabs.blockSignals(True)
+                tbTabs.clear()
+                tbTabs.blockSignals(False)
+
+                onSelector(activeWB, mode=1)
+            else:
+                pass
+
+        buttonSelectorUp.clicked.connect(onButtonSelectorUp)
+
+        def onButtonSelectorDown():
+            activeWB = FreeCADGui.activeWorkbench().name()
+            currentIndex = selectorList.currentRow()
+
+            selectorList.setSortingEnabled(False)
+            if currentIndex != selectorList.count() - 1:
+                currentItem = selectorList.takeItem(currentIndex)
+                selectorList.insertItem(currentIndex + 1, currentItem)
+                selectorList.setCurrentRow(currentIndex + 1)
+
+                items = []
+                for index in xrange(selectorList.count()):
+                    items.append(selectorList.item(index))
+
+                selectorListData = []
+                for i in items:
+                    selectorListData.append(i.data(QtCore.Qt.UserRole))
+
+                data = ".,.".join(selectorListData)
+                paramGet.SetString("SelectorList", data)
+
+                tbTabs.blockSignals(True)
+                tbTabs.clear()
+                tbTabs.blockSignals(False)
+
+                onSelector(activeWB, mode=1)
+            else:
+                pass
+
+        buttonSelectorDown.clicked.connect(onButtonSelectorDown)
+
+        def onButtonSelectorReset():
+            activeWB = FreeCADGui.activeWorkbench().name()
+            paramGet.RemString("SelectorList")
+            paramGet.RemString("SelectorList-Off")
+            makeSelectorList()
+
+            tbTabs.blockSignals(True)
+            tbTabs.clear()
+            tbTabs.blockSignals(False)
+
+            onSelector(activeWB, mode=1)
+
+        buttonSelectorReset.clicked.connect(onButtonSelectorReset)
+
+        def onButtonSelectorToggle():
+            if selectorModeGroup.isHidden():
+                selectorModeGroup.show()
+                paramGet.SetBool("ToggleSelector", 1)
+                buttonSelectorToggle.setArrowType(QtCore.Qt.RightArrow)
+            else:
+                selectorModeGroup.hide()
+                paramGet.SetBool("ToggleSelector", 0)
+                buttonSelectorToggle.setArrowType(QtCore.Qt.LeftArrow)
+
+        buttonSelectorToggle.clicked.connect(onButtonSelectorToggle)
+
+        if paramGet.GetBool("ToggleSelector"):
+            buttonSelectorToggle.setArrowType(QtCore.Qt.RightArrow)
+        else:
+            selectorModeGroup.hide()
+            buttonSelectorToggle.setArrowType(QtCore.Qt.LeftArrow)
+
+        selectorModeGroupLayout = QtGui.QVBoxLayout()
+        selectorModeGroup.setLayout(selectorModeGroupLayout)
+
+        selectorModeGroupLayout.addWidget(radioSelectorDefault)
+        selectorModeGroupLayout.addWidget(radioSelectorCustom)
+        selectorModeGroupLayout.addStretch(1)
+
+        selectorLayoutMain = QtGui.QHBoxLayout()
+        selectorLayoutMain.addWidget(selectorList)
+        selectorLayoutMain.addWidget(selectorModeGroup)
+
+        selectorLayoutButtons = QtGui.QHBoxLayout()
+        selectorLayoutButtons.addWidget(buttonSelectorReset)
+        selectorLayoutButtons.addWidget(buttonSelectorDown)
+        selectorLayoutButtons.addWidget(buttonSelectorUp)
+        selectorLayoutButtons.addStretch(1)
+        selectorLayoutButtons.addWidget(buttonSelectorToggle)
+
+        widgetSelector = QtGui.QWidget()
+        widgetSelectorLayout = QtGui.QVBoxLayout()
+        widgetSelector.setLayout(widgetSelectorLayout)
+
+        widgetSelectorLayout.insertLayout(0, selectorLayoutMain)
+        widgetSelectorLayout.insertLayout(1, selectorLayoutButtons)
+
+        if paramGet.GetString("SelectorMode") == "Custom":
+            radioSelectorCustom.setChecked(True)
+            makeSelectorList()
+        else:
+            radioSelectorDefault.setChecked(True)
+            makeSelectorList()
+
+        return widgetSelector
 
     def tabPrefAutoload():
         wbList = QtGui.QListWidget()
@@ -959,6 +1315,7 @@ def guiUp():
 
         tbPrefTabs.addTab(tabPrefGeneral(), "General")
         tbPrefTabs.addTab(tabPrefToolbar(), "Toolbar")
+        tbPrefTabs.addTab(tabPrefSelector(), "Selector")
         tbPrefTabs.addTab(tabPrefAutoload(), "Autoload")
 
     def quickMenu():
@@ -1082,41 +1439,109 @@ def guiUp():
 
         return menuButton
 
-    def addTabs():
+    def tabsList(activeWB):
+        mw = FreeCADGui.getMainWindow()
         wbList = FreeCADGui.listWorkbenches()
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
         paramWBGet = App.ParamGet("User parameter:BaseApp/Workbenches")
+        paramGen = App.ParamGet("User parameter:BaseApp/Preferences/General")
 
-        unsortedWBList = []
-        for i in wbList:
-            unsortedWBList.append(i)
+        if paramGet.GetString("SelectorMode") == "Custom":
+            sortedWBList = paramGet.GetString("SelectorList")
 
-        sortedWBList = sorted(unsortedWBList)
+            if sortedWBList:
+                sortedWBList = sortedWBList.split(".,.")
+            else:
+                unsortedWBList = []
+                for i in wbList:
+                    unsortedWBList.append(i)
+                sortedWBList = sorted(unsortedWBList)
 
-        if paramWBGet.GetString("Disabled"):
-            disabledWB = (((paramWBGet.GetString("Disabled"))
-                          .rsplit(',', 1)[0])
-                          .split(","))
-            for i in disabledWB:
-                if i in sortedWBList:
-                    sortedWBList.remove(i)
+            wbListOff = paramGet.GetString("SelectorList-Off")
+
+            if wbListOff:
+                wbListOff = wbListOff.split(".,.")
+                for i in wbListOff:
+                    if i in sortedWBList:
+                        sortedWBList.remove(i)
+                    else:
+                        pass
+            else:
+                pass
+
         else:
-            pass
+            unsortedWBList = []
+            for i in wbList:
+                unsortedWBList.append(i)
 
-        if paramWBGet.GetString("Enabled"):
-            tempWBList = []
-            enabledWB = (((paramWBGet.GetString("Enabled"))
-                         .rsplit(',', 1)[0])
-                         .split(","))
-            for i in enabledWB:
-                if i in sortedWBList:
-                    tempWBList.append(i)
-            sortedWBList = tempWBList
+            sortedWBList = sorted(unsortedWBList)
+
+            if paramWBGet.GetString("Disabled"):
+                disabledList = (((paramWBGet.GetString("Disabled"))
+                                .rsplit(',', 1)[0])
+                                .split(","))
+                for i in disabledList:
+                    if i in sortedWBList:
+                        sortedWBList.remove(i)
+                    else:
+                        pass
+            else:
+                pass
+
+            if paramWBGet.GetString("Enabled"):
+                tempWBList = []
+                enabledList = (((paramWBGet.GetString("Enabled"))
+                               .rsplit(',', 1)[0])
+                               .split(","))
+                for i in enabledList:
+                    if i in sortedWBList:
+                        tempWBList.append(i)
+                    else:
+                        pass
+
+                sortedWBList = tempWBList
+            else:
+                pass
+
+        if activeWB not in sortedWBList:
+            sortedWBList.append(activeWB)
+            paramGet.SetBool("AddRemove", 1)
         else:
-            pass
+            paramGet.SetBool("AddRemove", 0)
+
+        return sortedWBList
+
+    def removeTabs(WorkbenchName):
+        sortedWBList = tabsList(WorkbenchName)
+
+        tbTabsList = {}
+        for i in xrange(tbTabs.count()):
+            a = tbTabs.widget(i).objectName()
+            b = tbTabs.indexOf(tbTabs.widget(i))
+            tbTabsList[a] = b
+
+        for i in tbTabsList:
+            if i not in sortedWBList:
+                tbTabs.blockSignals(True)
+                tbTabs.removeTab(tbTabsList[i])
+                tbTabs.blockSignals(True)
+            else:
+                pass
+
+    def addTabs(WorkbenchName):
+        sortedWBList = tabsList(WorkbenchName)
+        wbList = FreeCADGui.listWorkbenches()
+        paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+        paramGen = App.ParamGet("User parameter:BaseApp/Preferences/General")
+
+        tbTabsList = []
+        for i in xrange(tbTabs.count()):
+            tbTabsList.append(tbTabs.widget(i).objectName())
+
+        tbTabs.blockSignals(True)
 
         for i in sortedWBList:
-            if i in wbList:
+            if i in wbList and i not in tbTabsList:
                 widget = QtGui.QWidget()
                 widget.setObjectName(i)
                 layout = FlowLayout.FlowLayout()
@@ -1151,24 +1576,97 @@ def guiUp():
                     tbTabs.addTab(scroll, icon, wbList[i].MenuText)
 
                 tbTabs.setTabToolTip(tbTabs.indexOf(scroll), wbList[i].ToolTip)
+            else:
+                pass
 
-    addTabs()
+        if tbTabs.count() == 0:
+            widget = QtGui.QWidget()
+            layout = FlowLayout.FlowLayout()
+            widget.setLayout(layout)
 
-    def onTabChange():
+            try:
+                FreeCADGui.activateWorkbench("NoneWorkbench")
+            except:
+                pass
+
+            icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
+            iconSize = paramGen.GetInt("ToolbarIconSize")
+
+            if not iconSize:
+                iconSize = 24
+            else:
+                pass
+
+            tbTabs.addTab(widget, icon, "None")
+            quickMenuButton = quickMenu()
+            quickMenuButton.setIconSize(QtCore.QSize(iconSize, iconSize))
+            layout.addWidget(quickMenuButton)
+        else:
+            pass
+
+        tbTabs.blockSignals(False)
+
+    def onSelector(WorkbenchName, mode=0):
+        mw = FreeCADGui.getMainWindow()
+        paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+
+        if WorkbenchName is "None":
+            pass
+        else:
+            if mode == 0:
+                currentAction = None
+                activeWB = FreeCADGui.activeWorkbench()
+
+                if activeWB.name() != WorkbenchName:
+                    for i in selectorActionGroup.actions():
+                        if i.objectName() == WorkbenchName:
+                            currentAction = i
+                        else:
+                            pass
+
+                    if currentAction is not None:
+                        currentAction.trigger()
+                    else:
+                        FreeCADGui.doCommand((str('Gui.activateWorkbench("'
+                                                  + WorkbenchName + '")')))
+                else:
+                    pass
+            else:
+                pass
+
+            scrollList = []
+            for i in xrange(tbTabs.count()):
+                scrollList.append(tbTabs.widget(i).objectName())
+
+            if paramGet.GetBool("AddRemove"):
+                removeTabs(WorkbenchName)
+            else:
+                pass
+
+            if WorkbenchName not in scrollList:
+                addTabs(WorkbenchName)
+            else:
+                pass
+
+            scrollList = []
+            for i in tbTabs.findChildren(QtGui.QScrollArea):
+                scrollList.append(i)
+
+            for i in scrollList:
+                if i.objectName() == WorkbenchName:
+                    tbTabs.blockSignals(True)
+                    tbTabs.setCurrentIndex(tbTabs.indexOf(i))
+                    tbTabs.blockSignals(False)
+                else:
+                    pass
+
+        onTabChange(WorkbenchName)
+
+    def onTabChange(activeWB):
         mw = FreeCADGui.getMainWindow()
         paramTBGet = App.ParamGet("User parameter:BaseApp/TabBar/Toolbars")
         paramGen = App.ParamGet("User parameter:BaseApp/Preferences/General")
 
-        activeWB = Gui.activeWorkbench().name()
-        activeTab = tbTabs.currentWidget().objectName()
-
-        if activeWB == activeTab:
-            pass
-        else:
-            FreeCADGui.doCommand((str('Gui.activateWorkbench("'
-                                 + activeTab + '")')))
-
-        activeWB = Gui.activeWorkbench().name()
         activeTab = tbTabs.currentWidget().objectName()
 
         iconSize = paramGen.GetInt("ToolbarIconSize")
@@ -1176,9 +1674,16 @@ def guiUp():
         if not iconSize:
             iconSize = 24
 
-        for i in mw.findChildren(QtGui.QLayout):
+        for i in tbTabs.findChildren(QtGui.QLayout):
             if i.objectName() == activeTab:
                 layout = i
+            else:
+                pass
+
+        if not layout:
+            layout = FlowLayout.FlowLayout()
+        else:
+            pass
 
         item = layout.takeAt(0)
         while item:
@@ -1222,21 +1727,92 @@ def guiUp():
             tbObjectNameAll[i.objectName()] = i
 
         toolbarButtons = []
+        if "Workbench" not in toolbarSortedList:
+                selectorButton = QtGui.QToolButton()
+                selectorButton.setObjectName("WorkbenchSelector")
+                toolbarButtons.append(selectorButton)
+        else:
+            pass
+
         for a in toolbarSortedList:
             if a in tbObjectNameAll:
+                if a == "Workbench":
+                    selectorButton = QtGui.QToolButton()
+                    selectorButton.setObjectName("WorkbenchSelector")
+                    toolbarButtons.append(selectorButton)
+                else:
+                    pass
+
                 for b in tbObjectNameAll[a].findChildren(QtGui.QToolButton):
                     try:
                         if not b.defaultAction().isSeparator():
                             toolbarButtons.append(b)
+                        else:
+                            pass
                     except:
                         pass
 
+        def workbenchSelector():
+            selectorButton = QtGui.QToolButton()
+            selectorMenu = QtGui.QMenu()
+            selectorButton.setMenu(selectorMenu)
+            selectorButton.setIconSize(QtCore.QSize(iconSize, iconSize))
+            selectorButton.setPopupMode(QtGui.QToolButton
+                                        .ToolButtonPopupMode.InstantPopup)
+            layout.addWidget(selectorButton)
+
+            wbList = FreeCADGui.listWorkbenches()
+            wbListSorted = sorted(wbList)
+
+            selectorActions = {}
+            selectorGroup = QtGui.QActionGroup(selectorMenu)
+            for i in wbList:
+                action = QtGui.QAction(selectorGroup)
+                action.setObjectName(i)
+                action.setCheckable(True)
+                action.setText(wbList[i].MenuText)
+
+                try:
+                    icon = wbIcon(wbList[i].Icon)
+                except:
+                    icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
+
+                action.setIcon(icon)
+
+                selectorActions[action.objectName()] = action
+
+            for i in wbListSorted:
+                if i in selectorActions:
+                    selectorMenu.addAction(selectorActions[i])
+                else:
+                    pass
+
+            for i in selectorGroup.actions():
+                if i.objectName() == activeWB:
+                    i.setChecked(True)
+                    selectorButton.setDefaultAction(i)
+                else:
+                    pass
+
+            def onSelectorGroup():
+
+                if selectorGroup.checkedAction():
+                    onSelector(selectorGroup.checkedAction().objectName())
+                else:
+                    pass
+
+            selectorGroup.triggered.connect(onSelectorGroup)
+
         def buttonAdd(i):
-            if i.menu() is None:
+
+            if i.objectName() == "WorkbenchSelector":
+                workbenchSelector()
+
+            elif i.menu() is None:
                 toolButton = QtGui.QToolButton()
                 toolButton.setAutoRaise(i.autoRaise())
                 toolButton.setDefaultAction(i.defaultAction())
-                toolButton.setIconSize(QSize(iconSize, iconSize))
+                toolButton.setIconSize(QtCore.QSize(iconSize, iconSize))
                 toolButton.installEventFilter((InstallEvent
                                               .InstallEvent(toolButton)))
                 layout.addWidget(toolButton)
@@ -1251,7 +1827,7 @@ def guiUp():
                 toolButton.setObjectName("menuButton")
                 toolButton.setAutoRaise(i.autoRaise())
                 toolButton.setDefaultAction(i.defaultAction())
-                toolButton.setIconSize(QSize(iconSize, iconSize))
+                toolButton.setIconSize(QtCore.QSize(iconSize, iconSize))
                 toolButton.installEventFilter((InstallEvent
                                               .InstallEvent(toolButton)))
                 toolButton.setMenu(i.menu())
@@ -1262,11 +1838,20 @@ def guiUp():
             buttonAdd(i)
 
         quickMenuButton = quickMenu()
-        quickMenuButton.setIconSize(QSize(iconSize, iconSize))
+        quickMenuButton.setIconSize(QtCore.QSize(iconSize, iconSize))
 
         layout.addWidget(quickMenuButton)
 
-    tbTabs.currentChanged.connect(onTabChange)
+    def onTabs():
+
+        activeTab = tbTabs.currentWidget().objectName()
+
+        if activeTab:
+            onSelector(activeTab)
+        else:
+            pass
+
+    tbTabs.currentChanged.connect(onTabs)
 
     def afterStart():
         mw = FreeCADGui.getMainWindow()
@@ -1315,13 +1900,14 @@ def guiUp():
 
         autoloadModules()
 
-        activeWB = Gui.activeWorkbench().name()
+        def onSelectorActionGroup():
+            checkedAction = selectorActionGroup.checkedAction().objectName()
+            onSelector(checkedAction, mode=1)
 
-        for i in mw.findChildren(QtGui.QScrollArea):
-            if i.objectName() == activeWB:
-                tbTabs.setCurrentIndex(tbTabs.indexOf(i))
+        selectorActionGroup.triggered.connect(onSelectorActionGroup)
 
-        onTabChange()
+        activeWB = FreeCADGui.activeWorkbench().name()
+        onSelector(activeWB, mode=1)
 
     afterStart()
 
