@@ -20,6 +20,18 @@
 from PySide import QtCore
 
 
+def beforeStart():
+    paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+    paramGet.RemBool("AddRemove")
+
+    pathTB = str("User parameter:BaseApp/Workbench/Global/Toolbar/TabBar")
+    paramTBGet = App.ParamGet(pathTB)
+    paramTBGet.SetString("Name", "TabBar")
+    paramTBGet.SetBool("Active", 1)
+
+beforeStart()
+
+
 def singleInstance():
     from PySide import QtGui
 
@@ -147,7 +159,8 @@ def guiUp():
             background: transparent;
         }
 
-        QScrollArea QToolButton {
+        QScrollArea QToolButton,
+        QScrollArea QToolButton#selectorButton:checked {
             margin: 0;
             padding: 2px;
             padding-left: 4px;
@@ -156,13 +169,20 @@ def guiUp():
             border-radius: 2px;
         }
 
+        QScrollArea QToolButton:checked {
+            border-bottom: 1px solid lightblue;
+            border-radius: 0px;
+        }
+
         QScrollArea QToolButton#menuButton {
             padding-left: 1px;
             padding-right: 7px;
         }
 
-        QScrollArea QToolButton:hover {
+        QScrollArea QToolButton:hover,
+        QScrollArea QToolButton#selectorButton:hover  {
             border: 1px solid lightblue;
+            border-radius: 2px;
         }
 
         QScrollArea QToolButton:pressed {
@@ -188,11 +208,12 @@ def guiUp():
         }
         """)
 
-    def beforeStart():
-        paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
-        paramGet.RemBool("AddRemove")
-
-    beforeStart()
+    tabSize = ("""
+        QTabBar::tab {
+            width: 0px;
+            height: 0px;
+        }
+        """)
 
     def getSelectorActionGroup():
         mw = FreeCADGui.getMainWindow()
@@ -306,6 +327,15 @@ def guiUp():
         for i in menuActions:
             if i.isEnabled():
                 toolbarList.append(i.text())
+            else:
+                pass
+
+        for i in toolbarList:
+            if i == "TabBar":
+                toolbarList.remove(i)
+            else:
+                pass
+
         return toolbarList
 
     def findDockWidget():
@@ -337,89 +367,196 @@ def guiUp():
     tbDockTitleBar = tbDock.titleBarWidget()
 
     def tabPrefGeneral():
-        groupTabStyle = QtGui.QGroupBox("Tab style:")
-        layoutTabStyle = QtGui.QVBoxLayout()
-        groupTabStyle.setLayout(layoutTabStyle)
+        mw = FreeCADGui.getMainWindow()
+        paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+        pathTB = str("User parameter:BaseApp/Workbench/Global/Toolbar/TabBar")
+        paramTBGet = App.ParamGet(pathTB)
 
-        radioTabStyleDefault = QtGui.QRadioButton("Default")
-        radioTabStyleIcon = QtGui.QRadioButton("Icon")
-        radioTabStyleText = QtGui.QRadioButton("Text")
+        groupSelectorMode = QtGui.QGroupBox("Selector mode:")
+        layoutSelectorMode = QtGui.QVBoxLayout()
+        groupSelectorMode.setLayout(layoutSelectorMode)
 
-        layoutTabStyle.addWidget(radioTabStyleDefault)
-        layoutTabStyle.addWidget(radioTabStyleIcon)
-        layoutTabStyle.addWidget(radioTabStyleText)
-        layoutTabStyle.addStretch(1)
+        radioSelectorModeTabBar = QtGui.QRadioButton("TabBar")
+        radioSelectorModeBar = QtGui.QRadioButton("Bar")
+        radioSelectorModeToolBar = QtGui.QRadioButton("ToolBar")
 
-        def onTabStyleDefault():
-            paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+        checkBoxSelectorOnly = QtGui.QCheckBox("Selector only")
+        checkBoxCompactMenu = QtGui.QCheckBox("Compact menu")
 
-            if radioTabStyleDefault.isChecked():
-                for i in xrange(tbTabs.count()):
-                    try:
-                        icon = wbIcon((FreeCADGui
-                                      .getWorkbench(tbTabs.widget(i)
-                                       .objectName())).Icon)
-                    except:
-                        icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
-                    tbTabs.setTabIcon(i, icon)
-                    tbTabs.setTabText(i, tbTabs.widget(i).windowTitle())
-                paramGet.SetString("TabStyle", "Default")
+        buttonGlobalReset = QtGui.QToolButton()
+        buttonGlobalReset.setText(u'\u27F3')
+        buttonGlobalReset.setToolTip("Reset All TabBar Settings")
+
+        resetWidget = QtGui.QWidget()
+        resetLayout = QtGui.QHBoxLayout()
+        resetWidget.setLayout(resetLayout)
+
+        resetLayout.addStretch(1)
+        resetLayout.addWidget(buttonGlobalReset)
+
+        indentWidgetSelectorOnly = QtGui.QWidget()
+        indentLayoutSelectorOnly = QtGui.QHBoxLayout()
+        indentWidgetSelectorOnly.setLayout(indentLayoutSelectorOnly)
+        indentLayoutSelectorOnly.addWidget(checkBoxSelectorOnly)
+        indentLayoutSelectorOnly.setContentsMargins(32, 0, 0, 0)
+
+        indentWidgetCompactMenu = QtGui.QWidget()
+        indentLayoutCompactMenu = QtGui.QHBoxLayout()
+        indentWidgetCompactMenu.setLayout(indentLayoutCompactMenu)
+        indentLayoutCompactMenu.addWidget(checkBoxCompactMenu)
+        indentLayoutCompactMenu.setContentsMargins(32, 0, 0, 0)
+
+        layoutSelectorMode.addWidget(radioSelectorModeTabBar)
+        layoutSelectorMode.addWidget(radioSelectorModeBar)
+        layoutSelectorMode.addWidget(indentWidgetSelectorOnly)
+        layoutSelectorMode.addWidget(radioSelectorModeToolBar)
+        layoutSelectorMode.addWidget(indentWidgetCompactMenu)
+
+        layoutSelectorMode.addStretch(1)
+        layoutSelectorMode.addWidget(resetWidget)
+
+        def onRadioSelectorModeTabBar():
+
+            paramGet.SetString("GeneralSelectorMode", "TabBar")
+
+            tbTabs.setStyleSheet("")
+            tbTabs.tabBar().show()
+
+            checkBoxSelectorOnly.setEnabled(False)
+            checkBoxCompactMenu.setEnabled(False)
+
+            pathGT = str("User parameter:BaseApp/Workbench/Global/Toolbar")
+            paramGTGet = App.ParamGet(pathGT)
+
+            paramTBGet.SetBool("Active", 0)
+
+            for i in mw.findChildren(QtGui.QToolBar):
+                if i.objectName() == "TabBar":
+                    i.setVisible(False)
+                else:
+                    pass
+
+            activeWB = FreeCADGui.activeWorkbench().name()
+            onSelector(activeWB)
+
+        radioSelectorModeTabBar.toggled.connect(onRadioSelectorModeTabBar)
+
+        def onRadioSelectorModeBar():
+
+            paramGet.SetString("GeneralSelectorMode", "Bar")
+
+            tbTabs.setStyleSheet(tabSize)
+            tbTabs.tabBar().hide()
+
+            checkBoxSelectorOnly.setEnabled(True)
+            checkBoxCompactMenu.setEnabled(False)
+
+            pathGT = str("User parameter:BaseApp/Workbench/Global/Toolbar")
+            paramGTGet = App.ParamGet(pathGT)
+
+            paramTBGet.SetBool("Active", 0)
+
+            for i in mw.findChildren(QtGui.QToolBar):
+                if i.objectName() == "TabBar":
+                    i.setVisible(False)
+                else:
+                    pass
+
+            activeWB = FreeCADGui.activeWorkbench().name()
+            onSelector(activeWB)
+
+        radioSelectorModeBar.toggled.connect(onRadioSelectorModeBar)
+
+        def onRadioSelectorModeToolBar():
+
+            paramGet.SetString("GeneralSelectorMode", "ToolBar")
+
+            tbTabs.setStyleSheet(tabSize)
+            tbTabs.tabBar().hide()
+
+            checkBoxSelectorOnly.setEnabled(False)
+            checkBoxCompactMenu.setEnabled(True)
+
+            pathGT = str("User parameter:BaseApp/Workbench/Global/Toolbar")
+            paramGTGet = App.ParamGet(pathGT)
+
+            paramTBGet.SetBool("Active", 1)
+
+            for i in mw.findChildren(QtGui.QToolBar):
+                if i.objectName() == "TabBar":
+                    i.setVisible(True)
+                else:
+                    pass
+
+            activeWB = FreeCADGui.activeWorkbench().name()
+            onSelector(activeWB)
+
+        radioSelectorModeToolBar.toggled.connect(onRadioSelectorModeToolBar)
+
+        def onCheckBoxSelectorOnly():
+            if checkBoxSelectorOnly.isChecked():
+                paramGet.SetBool("SelectorOnly", 1)
             else:
-                pass
+                paramGet.SetBool("SelectorOnly", 0)
 
-        radioTabStyleDefault.toggled.connect(onTabStyleDefault)
+            activeWB = FreeCADGui.activeWorkbench().name()
+            onSelector(activeWB)
 
-        def onTabStyleIcon():
-            paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+        checkBoxSelectorOnly.toggled.connect(onCheckBoxSelectorOnly)
 
-            if radioTabStyleIcon.isChecked():
-                for i in xrange(tbTabs.count()):
-                    try:
-                        icon = wbIcon((FreeCADGui
-                                      .getWorkbench(tbTabs.widget(i)
-                                       .objectName())).Icon)
-                    except:
-                        icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
-                    tbTabs.setTabText(i, "")
-                    tbTabs.setTabIcon(i, icon)
-                paramGet.SetString("TabStyle", "Icon")
+        def onCheckBoxCompactMenu():
+            if checkBoxCompactMenu.isChecked():
+                paramGet.SetBool("CompactMenu", 1)
             else:
-                pass
+                paramGet.SetBool("CompactMenu", 0)
 
-        radioTabStyleIcon.toggled.connect(onTabStyleIcon)
+            activeWB = FreeCADGui.activeWorkbench().name()
+            onSelector(activeWB)
 
-        def onTabStyleText():
-            paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+        checkBoxCompactMenu.toggled.connect(onCheckBoxCompactMenu)
 
-            if radioTabStyleText.isChecked():
-                for i in xrange(tbTabs.count()):
-                    tbTabs.setTabIcon(i, QtGui.QIcon())
-                    tbTabs.setTabText(i, tbTabs.widget(i).windowTitle())
-                paramGet.SetString("TabStyle", "Text")
-            else:
-                pass
+        def onButtonGlobalReset():
+            paramGetBaseApp = App.ParamGet("User parameter:BaseApp")
+            paramGetBaseApp.RemGroup("TabBar")
 
-        radioTabStyleText.toggled.connect(onTabStyleText)
+            tbTabs.setStyleSheet("")
+            tbTabs.tabBar().show()
+
+            tbDock.setTitleBarWidget(tbDockTitleBar)
+            tbTabs.setTabPosition(QtGui.QTabWidget.North)
+
+            activeWB = FreeCADGui.activeWorkbench().name()
+            onSelector(activeWB)
+
+            onControl()
+
+        buttonGlobalReset.clicked.connect(onButtonGlobalReset)
 
         widgetGeneral = QtGui.QWidget()
-        layoutGeneral = QtGui.QHBoxLayout()
+        layoutGeneral = QtGui.QVBoxLayout()
         widgetGeneral.setLayout(layoutGeneral)
 
-        layoutGeneralLeft = QtGui.QVBoxLayout()
-        layoutGeneral.addLayout(layoutGeneralLeft)
-        layoutGeneralLeft.addWidget(groupTabStyle)
+        layoutGeneral.addWidget(groupSelectorMode)
 
-        paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
-
-        if paramGet.GetString("TabStyle"):
-            if paramGet.GetString("TabStyle") == "Default":
-                radioTabStyleDefault.setChecked(True)
-            elif paramGet.GetString("TabStyle") == "Icon":
-                radioTabStyleIcon.setChecked(True)
-            elif paramGet.GetString("TabStyle") == "Text":
-                radioTabStyleText.setChecked(True)
+        if paramGet.GetString("GeneralSelectorMode"):
+            if paramGet.GetString("GeneralSelectorMode") == "TabBar":
+                radioSelectorModeTabBar.setChecked(True)
+            elif paramGet.GetString("GeneralSelectorMode") == "Bar":
+                radioSelectorModeBar.setChecked(True)
+            elif paramGet.GetString("GeneralSelectorMode") == "ToolBar":
+                radioSelectorModeToolBar.setChecked(True)
         else:
-            radioTabStyleDefault.setChecked(True)
+            radioSelectorModeTabBar.setChecked(True)
+
+        if paramGet.GetBool("SelectorOnly"):
+            checkBoxSelectorOnly.setChecked(True)
+        else:
+            pass
+
+        if paramGet.GetBool("CompactMenu"):
+            checkBoxCompactMenu.setChecked(True)
+        else:
+            pass
 
         return widgetGeneral
 
@@ -574,7 +711,10 @@ def guiUp():
             tbList = []
             for i in mw.findChildren(QtGui.QToolBar):
                 if i.windowTitle() not in toolbarList:
-                    tbList.append(i)
+                    if i.windowTitle() != "TabBar":
+                        tbList.append(i)
+                    else:
+                        pass
                 else:
                     pass
 
@@ -920,7 +1060,6 @@ def guiUp():
 
         def makeSelectorList():
             selectorList.blockSignals(True)
-            selectorList.setSortingEnabled(False)
 
             def addItem(a, b):
 
@@ -951,11 +1090,13 @@ def guiUp():
                 selectorList.clear()
 
                 wbList = FreeCADGui.listWorkbenches()
-                selectorList.setSortingEnabled(True)
-                selectorList.sortItems(QtCore.Qt.AscendingOrder)
+                wbListSorted = sorted(wbList)
 
-                for i in wbList:
-                    addItem(wbList[i], i)
+                for i in wbListSorted:
+                    if i in wbList:
+                        addItem(wbList[i], i)
+                    else:
+                        pass
 
             if paramGet.GetString("SelectorMode") == "Default":
                 if paramGeneralGet.GetString("Enabled"):
@@ -1084,7 +1225,6 @@ def guiUp():
             activeWB = FreeCADGui.activeWorkbench().name()
             currentIndex = selectorList.currentRow()
 
-            selectorList.setSortingEnabled(False)
             if currentIndex != 0:
                 currentItem = selectorList.takeItem(currentIndex)
                 selectorList.insertItem(currentIndex - 1, currentItem)
@@ -1115,7 +1255,6 @@ def guiUp():
             activeWB = FreeCADGui.activeWorkbench().name()
             currentIndex = selectorList.currentRow()
 
-            selectorList.setSortingEnabled(False)
             if currentIndex != selectorList.count() - 1:
                 currentItem = selectorList.takeItem(currentIndex)
                 selectorList.insertItem(currentIndex + 1, currentItem)
@@ -1208,11 +1347,114 @@ def guiUp():
 
         return widgetSelector
 
+    def tabPrefStyle():
+        groupSelectorStyle = QtGui.QGroupBox("Selector style:")
+        layoutSelectorStyle = QtGui.QVBoxLayout()
+        groupSelectorStyle.setLayout(layoutSelectorStyle)
+
+        radioSelectorStyleIconText = QtGui.QRadioButton("Icon and text")
+        radioSelectorStyleIcon = QtGui.QRadioButton("Icon")
+        radioSelectorStyleText = QtGui.QRadioButton("Text")
+
+        layoutSelectorStyle.addWidget(radioSelectorStyleIconText)
+        layoutSelectorStyle.addWidget(radioSelectorStyleIcon)
+        layoutSelectorStyle.addWidget(radioSelectorStyleText)
+        layoutSelectorStyle.addStretch(1)
+
+        def onSelectorStyleIconText():
+            paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+
+            if radioSelectorStyleIconText.isChecked():
+                for i in xrange(tbTabs.count()):
+                    try:
+                        icon = wbIcon((FreeCADGui
+                                      .getWorkbench(tbTabs.widget(i)
+                                       .objectName())).Icon)
+                    except:
+                        icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
+                    tbTabs.setTabIcon(i, icon)
+                    tbTabs.setTabText(i, tbTabs.widget(i).windowTitle())
+                paramGet.SetString("SelectorStyle", "IconText")
+
+                if paramGet.GetString("GeneralSelectorMode") == "ToolBar":
+                    activeWB = FreeCADGui.activeWorkbench().name()
+                    onSelector(activeWB)
+                else:
+                    pass
+            else:
+                pass
+
+        radioSelectorStyleIconText.toggled.connect(onSelectorStyleIconText)
+
+        def onSelectorStyleIcon():
+            paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+
+            if radioSelectorStyleIcon.isChecked():
+                for i in xrange(tbTabs.count()):
+                    try:
+                        icon = wbIcon((FreeCADGui
+                                      .getWorkbench(tbTabs.widget(i)
+                                       .objectName())).Icon)
+                    except:
+                        icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
+                    tbTabs.setTabText(i, "")
+                    tbTabs.setTabIcon(i, icon)
+                paramGet.SetString("SelectorStyle", "Icon")
+
+                if paramGet.GetString("GeneralSelectorMode") == "ToolBar":
+                    activeWB = FreeCADGui.activeWorkbench().name()
+                    onSelector(activeWB)
+                else:
+                    pass
+            else:
+                pass
+
+        radioSelectorStyleIcon.toggled.connect(onSelectorStyleIcon)
+
+        def onSelectorStyleText():
+            paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+
+            if radioSelectorStyleText.isChecked():
+                for i in xrange(tbTabs.count()):
+                    tbTabs.setTabIcon(i, QtGui.QIcon())
+                    tbTabs.setTabText(i, tbTabs.widget(i).windowTitle())
+                paramGet.SetString("SelectorStyle", "Text")
+
+                if paramGet.GetString("GeneralSelectorMode") == "ToolBar":
+                    activeWB = FreeCADGui.activeWorkbench().name()
+                    onSelector(activeWB)
+                else:
+                    pass
+            else:
+                pass
+
+        radioSelectorStyleText.toggled.connect(onSelectorStyleText)
+
+        widgetStyle = QtGui.QWidget()
+        layoutStyle = QtGui.QHBoxLayout()
+        widgetStyle.setLayout(layoutStyle)
+
+        layoutStyleLeft = QtGui.QVBoxLayout()
+        layoutStyle.addLayout(layoutStyleLeft)
+        layoutStyleLeft.addWidget(groupSelectorStyle)
+
+        paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+
+        if paramGet.GetString("SelectorStyle"):
+            if paramGet.GetString("SelectorStyle") == "IconText":
+                radioSelectorStyleIconText.setChecked(True)
+            elif paramGet.GetString("SelectorStyle") == "Icon":
+                radioSelectorStyleIcon.setChecked(True)
+            elif paramGet.GetString("SelectorStyle") == "Text":
+                radioSelectorStyleText.setChecked(True)
+        else:
+            radioSelectorStyleIconText.setChecked(True)
+
+        return widgetStyle
+
     def tabPrefAutoload():
         wbList = QtGui.QListWidget()
         wbList.setIconSize(QtCore.QSize(20, 20))
-        wbList.setSortingEnabled(True)
-        wbList.sortItems(QtCore.Qt.AscendingOrder)
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
         wbList.setHorizontalScrollBarPolicy(QtCore
                                             .Qt.ScrollBarAlwaysOff)
@@ -1229,25 +1471,29 @@ def guiUp():
 
         def workbenchList():
             listWorkbenches = FreeCADGui.listWorkbenches()
+            wbListSorted = sorted(listWorkbenches)
 
-            for i in listWorkbenches:
-                item = QtGui.QListWidgetItem(wbList)
+            for i in wbListSorted:
+                if i in listWorkbenches:
+                    item = QtGui.QListWidgetItem(wbList)
 
-                try:
-                    icon = wbIcon(listWorkbenches[i].Icon)
-                except:
-                    icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
+                    try:
+                        icon = wbIcon(listWorkbenches[i].Icon)
+                    except:
+                        icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
 
-                item.setIcon(icon)
+                    item.setIcon(icon)
 
-                if i == autoLoadModule:
-                    item.setFlags(QtCore.Qt.ItemIsSelectable)
-                    item.setText(listWorkbenches[i].MenuText)
-                    item.setCheckState(QtCore.Qt.CheckState(2))
+                    if i == autoLoadModule:
+                        item.setFlags(QtCore.Qt.ItemIsSelectable)
+                        item.setText(listWorkbenches[i].MenuText)
+                        item.setCheckState(QtCore.Qt.CheckState(2))
+                    else:
+                        item.setFlags(item.flags())
+                        item.setText(listWorkbenches[i].MenuText)
+                        item.setCheckState(QtCore.Qt.CheckState(0))
                 else:
-                    item.setFlags(item.flags())
-                    item.setText(listWorkbenches[i].MenuText)
-                    item.setCheckState(QtCore.Qt.CheckState(0))
+                    pass
 
             modulesList = (paramGet.GetString("LoadModules")).split(",")
 
@@ -1316,6 +1562,7 @@ def guiUp():
         tbPrefTabs.addTab(tabPrefGeneral(), "General")
         tbPrefTabs.addTab(tabPrefToolbar(), "Toolbar")
         tbPrefTabs.addTab(tabPrefSelector(), "Selector")
+        tbPrefTabs.addTab(tabPrefStyle(), "Style")
         tbPrefTabs.addTab(tabPrefAutoload(), "Autoload")
 
     def quickMenu():
@@ -1432,6 +1679,22 @@ def guiUp():
                 lockAction.setChecked(True)
             else:
                 lockAction.setChecked(False)
+
+            if paramGet.GetString("GeneralSelectorMode") == "Bar":
+                radioTop.setEnabled(False)
+                radioBottom.setEnabled(False)
+                radioLeft.setEnabled(False)
+                radioRight.setEnabled(False)
+            elif paramGet.GetString("GeneralSelectorMode") == "ToolBar":
+                radioTop.setEnabled(False)
+                radioBottom.setEnabled(False)
+                radioLeft.setEnabled(False)
+                radioRight.setEnabled(False)
+            else:
+                radioTop.setEnabled(True)
+                radioBottom.setEnabled(True)
+                radioLeft.setEnabled(True)
+                radioRight.setEnabled(True)
 
         menu.aboutToShow.connect(onOpen)
 
@@ -1565,12 +1828,12 @@ def guiUp():
                 except:
                     icon = QtGui.QIcon(QtGui.QPixmap(noneIcon))
 
-                if paramGet.GetString("TabStyle"):
-                    if paramGet.GetString("TabStyle") == "Default":
+                if paramGet.GetString("SelectorStyle"):
+                    if paramGet.GetString("SelectorStyle") == "IconText":
                         tbTabs.addTab(scroll, icon, wbList[i].MenuText)
-                    elif paramGet.GetString("TabStyle") == "Icon":
+                    elif paramGet.GetString("SelectorStyle") == "Icon":
                         tbTabs.addTab(scroll, icon, "")
-                    elif paramGet.GetString("TabStyle") == "Text":
+                    elif paramGet.GetString("SelectorStyle") == "Text":
                         tbTabs.addTab(scroll, wbList[i].MenuText)
                 else:
                     tbTabs.addTab(scroll, icon, wbList[i].MenuText)
@@ -1664,6 +1927,7 @@ def guiUp():
 
     def onTabChange(activeWB):
         mw = FreeCADGui.getMainWindow()
+        paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
         paramTBGet = App.ParamGet("User parameter:BaseApp/TabBar/Toolbars")
         paramGen = App.ParamGet("User parameter:BaseApp/Preferences/General")
 
@@ -1728,9 +1992,12 @@ def guiUp():
 
         toolbarButtons = []
         if "Workbench" not in toolbarSortedList:
+            if "Workbench" not in toolbarOffList:
                 selectorButton = QtGui.QToolButton()
                 selectorButton.setObjectName("WorkbenchSelector")
                 toolbarButtons.append(selectorButton)
+            else:
+                pass
         else:
             pass
 
@@ -1741,31 +2008,45 @@ def guiUp():
                     selectorButton.setObjectName("WorkbenchSelector")
                     toolbarButtons.append(selectorButton)
                 else:
-                    pass
-
-                for b in tbObjectNameAll[a].findChildren(QtGui.QToolButton):
-                    try:
-                        if not b.defaultAction().isSeparator():
-                            toolbarButtons.append(b)
-                        else:
+                    for b in tbObjectNameAll[a].findChildren(QtGui
+                                                             .QToolButton):
+                        try:
+                            if not b.defaultAction().isSeparator():
+                                toolbarButtons.append(b)
+                            else:
+                                pass
+                        except:
                             pass
-                    except:
-                        pass
+            else:
+                pass
 
-        def workbenchSelector():
-            selectorButton = QtGui.QToolButton()
+        def workbenchSelector(mode=0):
+
             selectorMenu = QtGui.QMenu()
-            selectorButton.setMenu(selectorMenu)
-            selectorButton.setIconSize(QtCore.QSize(iconSize, iconSize))
-            selectorButton.setPopupMode(QtGui.QToolButton
-                                        .ToolButtonPopupMode.InstantPopup)
-            layout.addWidget(selectorButton)
+
+            if mode == 0:
+                selectorButton = QtGui.QToolButton()
+                selectorButton.setMenu(selectorMenu)
+                selectorButton.setObjectName("selectorButton")
+                selectorButton.setIconSize(QtCore.QSize(iconSize, iconSize))
+                selectorButton.setPopupMode(QtGui.QToolButton
+                                            .ToolButtonPopupMode.InstantPopup)
+                layout.addWidget(selectorButton)
+            elif mode == 2:
+                selectorAction = QtGui.QAction(mw)
+                selectorAction.setMenu(selectorMenu)
+            else:
+                pass
 
             wbList = FreeCADGui.listWorkbenches()
             wbListSorted = sorted(wbList)
 
+            if mode == 1:
+                selectorGroup = QtGui.QActionGroup(mw)
+            else:
+                selectorGroup = QtGui.QActionGroup(selectorMenu)
+
             selectorActions = {}
-            selectorGroup = QtGui.QActionGroup(selectorMenu)
             for i in wbList:
                 action = QtGui.QAction(selectorGroup)
                 action.setObjectName(i)
@@ -1781,16 +2062,25 @@ def guiUp():
 
                 selectorActions[action.objectName()] = action
 
-            for i in wbListSorted:
-                if i in selectorActions:
-                    selectorMenu.addAction(selectorActions[i])
-                else:
-                    pass
+            if mode != 1:
+                for i in wbListSorted:
+                    if i in selectorActions:
+                        selectorMenu.addAction(selectorActions[i])
+                    else:
+                        pass
+            else:
+                pass
 
             for i in selectorGroup.actions():
                 if i.objectName() == activeWB:
                     i.setChecked(True)
-                    selectorButton.setDefaultAction(i)
+                    if mode == 0:
+                        selectorButton.setDefaultAction(i)
+                    elif mode == 2:
+                        selectorAction.setIcon(i.icon())
+                        selectorAction.setText(i.text())
+                    else:
+                        pass
                 else:
                     pass
 
@@ -1803,10 +2093,120 @@ def guiUp():
 
             selectorGroup.triggered.connect(onSelectorGroup)
 
+            if mode == 1:
+
+                tabsList = []
+                for i in xrange(tbTabs.count()):
+                    tabsList.append(tbTabs.widget(i).objectName())
+
+                tempList = {}
+                for i in selectorGroup.actions():
+                    tempList[i.objectName()] = i
+
+                selectorList = []
+                for i in tabsList:
+                    if i in tempList:
+                        selectorList.append(tempList[i])
+                return selectorList
+
+            elif mode == 2:
+
+                return selectorAction
+
+            else:
+                pass
+
+        def selectorModeBar():
+
+            workbenchSelector()
+
+            for i in workbenchSelector(mode=1):
+                toolButton = QtGui.QToolButton()
+                toolButton.setDefaultAction(i)
+                toolButton.setIconSize(QtCore.QSize(iconSize, iconSize))
+                toolButton.installEventFilter((InstallEvent
+                                              .InstallEvent(toolButton)))
+                layout.addWidget(toolButton)
+
+        def selectorModeToolBar(mode=0):
+
+            for i in mw.findChildren(QtGui.QToolBar):
+                if i.objectName() == "TabBar":
+                    if i.isVisible():
+                        pass
+                    else:
+                        i.setVisible(True)
+                else:
+                    pass
+
+            if mode == 0:
+                workbenchSelector()
+            else:
+                pass
+
+            for i in mw.findChildren(QtGui.QToolBar):
+                if i.objectName() == "TabBar":
+                    toolbar = i
+                else:
+                    pass
+
+            try:
+
+                toolbar.clear()
+
+                buttonStyle = toolbar.toolButtonStyle()
+
+                if paramGet.GetString("SelectorStyle") == "IconText":
+                    if buttonStyle != QtCore.Qt.ToolButtonTextBesideIcon:
+                        setStyle = QtCore.Qt.ToolButtonTextBesideIcon
+                        toolbar.setToolButtonStyle(setStyle)
+                    else:
+                        pass
+                elif paramGet.GetString("SelectorStyle") == "Text":
+                    if buttonStyle != QtCore.Qt.ToolButtonTextOnly:
+                        setStyle = QtCore.Qt.ToolButtonTextOnly
+                        toolbar.setToolButtonStyle(setStyle)
+                    else:
+                        pass
+                else:
+                    if buttonStyle != QtCore.Qt.ToolButtonIconOnly:
+                        setStyle = QtCore.Qt.ToolButtonIconOnly
+                        toolbar.setToolButtonStyle(setStyle)
+                    else:
+                        pass
+
+                if paramGet.GetBool("CompactMenu"):
+                    menuAction = workbenchSelector(mode=2)
+                    toolbar.addAction(menuAction)
+                    menuButton = toolbar.widgetForAction(menuAction)
+                    menuButton.setToolButtonStyle(QtCore.Qt.ToolButtonIconOnly)
+                else:
+                    pass
+
+                for i in workbenchSelector(mode=1):
+                    toolbar.addAction(i)
+
+                prefAction = QtGui.QAction(toolbar)
+                toolbar.addAction(prefAction)
+                prefButton = toolbar.widgetForAction(prefAction)
+                prefButton.setIcon(QtGui.QIcon(QtGui.QPixmap(settingsIcon)))
+                prefButton.setToolButtonStyle(QtCore.Qt.ToolButtonIconOnly)
+
+                prefButton.clicked.connect(onControl)
+
+            except NameError:
+                print "TabBar: No toolbar named TabBar!"
+
         def buttonAdd(i):
 
             if i.objectName() == "WorkbenchSelector":
-                workbenchSelector()
+
+                if paramGet.GetString("GeneralSelectorMode") == "Bar":
+                    selectorModeBar()
+                elif paramGet.GetString("GeneralSelectorMode") == "ToolBar":
+                    selectorModeToolBar()
+                else:
+                    workbenchSelector()
 
             elif i.menu() is None:
                 toolButton = QtGui.QToolButton()
@@ -1834,8 +2234,35 @@ def guiUp():
                 toolButton.setPopupMode(i.popupMode())
                 layout.addWidget(toolButton)
 
-        for i in toolbarButtons:
-            buttonAdd(i)
+        if paramGet.GetString("GeneralSelectorMode") == "Bar":
+            if paramGet.GetBool("SelectorOnly"):
+                    selectorButton = QtGui.QToolButton()
+                    selectorButton.setObjectName("WorkbenchSelector")
+                    buttonAdd(selectorButton)
+            else:
+                for i in toolbarButtons:
+                    buttonAdd(i)
+        elif paramGet.GetString("GeneralSelectorMode") == "ToolBar":
+
+            for i in toolbarButtons:
+                buttonAdd(i)
+
+            findSelector = False
+
+            for i in toolbarButtons:
+                if i.objectName() == "WorkbenchSelector":
+                    findSelector = True
+                else:
+                    pass
+
+            if findSelector:
+                pass
+            else:
+                selectorModeToolBar(mode=1)
+
+        else:
+            for i in toolbarButtons:
+                buttonAdd(i)
 
         quickMenuButton = quickMenu()
         quickMenuButton.setIconSize(QtCore.QSize(iconSize, iconSize))
@@ -1856,6 +2283,8 @@ def guiUp():
     def afterStart():
         mw = FreeCADGui.getMainWindow()
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+        pathTB = str("User parameter:BaseApp/Workbench/Global/Toolbar/TabBar")
+        paramTBGet = App.ParamGet(pathTB)
 
         if paramGet.GetString("Position"):
             if paramGet.GetString("Position") == "North":
@@ -1908,6 +2337,36 @@ def guiUp():
 
         activeWB = FreeCADGui.activeWorkbench().name()
         onSelector(activeWB, mode=1)
+
+        if paramGet.GetString("GeneralSelectorMode") == "Bar":
+            tbTabs.setStyleSheet(tabSize)
+            tbTabs.tabBar().hide()
+            paramTBGet.SetBool("Active", 0)
+
+            for i in mw.findChildren(QtGui.QToolBar):
+                if i.objectName() == "TabBar":
+                    i.setVisible(False)
+                else:
+                    pass
+
+        elif paramGet.GetString("GeneralSelectorMode") == "ToolBar":
+            tbTabs.setStyleSheet(tabSize)
+            tbTabs.tabBar().hide()
+
+            for i in mw.findChildren(QtGui.QToolBar):
+                if i.objectName() == "TabBar":
+                    i.setVisible(True)
+                else:
+                    pass
+
+        else:
+            paramTBGet.SetBool("Active", 0)
+
+            for i in mw.findChildren(QtGui.QToolBar):
+                if i.objectName() == "TabBar":
+                    i.setVisible(False)
+                else:
+                    pass
 
     afterStart()
 
