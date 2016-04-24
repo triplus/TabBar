@@ -1565,7 +1565,55 @@ def guiUp():
         tbPrefTabs.addTab(tabPrefStyle(), "Style")
         tbPrefTabs.addTab(tabPrefAutoload(), "Autoload")
 
-    def quickMenu():
+    def showHideToolBars(mode=0):
+        mw = FreeCADGui.getMainWindow()
+        paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
+
+        for i in mw.findChildren(QtGui.QAction):
+            if i.objectName() == "Std_ToolBarMenu":
+                menu = i.menu()
+            else:
+                pass
+
+        tempButton = QtGui.QPushButton(mw)
+        tempButton.clicked.connect(menu.aboutToShow)
+        tempButton.click()
+        tempButton.deleteLater()
+
+        toolbarList = []
+        menuActions = menu.actions()
+        for i in menuActions:
+            if i.isEnabled():
+                toolbarList.append(i.text())
+            else:
+                pass
+
+        selectorMode = paramGet.GetString("GeneralSelectorMode")
+
+        for i in mw.findChildren(QtGui.QToolBar):
+            if i.windowTitle() in toolbarList:
+                if mode == 0:
+                    if selectorMode == "ToolBar":
+                        if i.windowTitle() != "TabBar":
+                            i.setVisible(False)
+                        else:
+                            pass
+                    else:
+                        i.setVisible(False)
+                elif mode == 1:
+                    if selectorMode != "ToolBar":
+                        if i.windowTitle() != "TabBar":
+                            i.setVisible(True)
+                        else:
+                            pass
+                    else:
+                        i.setVisible(True)
+                else:
+                    pass
+            else:
+                pass
+
+    def quickMenu(mode=0):
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
 
         menu = QtGui.QMenu()
@@ -1574,6 +1622,20 @@ def guiUp():
         lockAction = QtGui.QAction(menu)
         lockAction.setIconText("Lock")
         lockAction.setCheckable(True)
+
+        toolbarsAction = QtGui.QAction(menu)
+        toolbarsAction.setIconText("Toolbars")
+        toolbarsMenu = QtGui.QMenu()
+        toolbarsAction.setMenu(toolbarsMenu)
+
+        showAction = QtGui.QAction(toolbarsMenu)
+        showAction.setIconText("Show")
+
+        hideAction = QtGui.QAction(toolbarsMenu)
+        hideAction.setIconText("Hide")
+
+        toolbarsMenu.addAction(showAction)
+        toolbarsMenu.addAction(hideAction)
 
         radioTop = QtGui.QRadioButton("Top")
         radioActionTop = QtGui.QWidgetAction(menu)
@@ -1599,6 +1661,8 @@ def guiUp():
         prefButtonAction.setDefaultWidget(prefButton)
 
         menu.addAction(lockAction)
+        menu.addSeparator()
+        menu.addAction(toolbarsAction)
         menu.addSeparator()
         menu.addAction(radioActionTop)
         menu.addAction(radioActionBottom)
@@ -1660,6 +1724,16 @@ def guiUp():
 
         lockAction.changed.connect(onLockToggle)
 
+        def onShowToolbars():
+            showHideToolBars(mode=1)
+
+        showAction.triggered.connect(onShowToolbars)
+
+        def onHideToolbars():
+            showHideToolBars(mode=0)
+
+        hideAction.triggered.connect(onHideToolbars)
+
         prefButton.clicked.connect(onControl)
 
         def onOpen():
@@ -1700,7 +1774,10 @@ def guiUp():
 
         onOpen()
 
-        return menuButton
+        if mode == 1:
+            return menu
+        else:
+            return menuButton
 
     def tabsList(activeWB):
         mw = FreeCADGui.getMainWindow()
@@ -1879,6 +1956,7 @@ def guiUp():
             if mode == 0:
                 currentAction = None
                 activeWB = FreeCADGui.activeWorkbench()
+                command = str('Gui.activateWorkbench("' + WorkbenchName + '")')
 
                 if activeWB.name() != WorkbenchName:
                     for i in selectorActionGroup.actions():
@@ -1890,8 +1968,7 @@ def guiUp():
                     if currentAction is not None:
                         currentAction.trigger()
                     else:
-                        FreeCADGui.doCommand((str('Gui.activateWorkbench("'
-                                                  + WorkbenchName + '")')))
+                        FreeCADGui.doCommand(command)
                 else:
                     pass
             else:
@@ -2187,13 +2264,16 @@ def guiUp():
                     toolbar.addAction(i)
 
                 prefAction = QtGui.QAction(toolbar)
+                menu = quickMenu(mode=1)
+                prefAction.setMenu(menu)
                 toolbar.addAction(prefAction)
+
                 prefButton = toolbar.widgetForAction(prefAction)
+                prefButton.setAutoRaise(True)
                 prefButton.setIcon(QtGui.QIcon(QtGui.QPixmap(settingsIcon)))
                 prefButton.setToolButtonStyle(QtCore.Qt.ToolButtonIconOnly)
-
-                prefButton.clicked.connect(onControl)
-
+                prefButton.setPopupMode(QtGui.QToolButton
+                                        .ToolButtonPopupMode.InstantPopup)
             except NameError:
                 print "TabBar: No toolbar named TabBar!"
 
