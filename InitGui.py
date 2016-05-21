@@ -1,20 +1,20 @@
-#TabBar widget for FreeCAD
-#Copyright (C) 2015, 2016  triplus @ FreeCAD
+# TabBar widget for FreeCAD
+# Copyright (C) 2015, 2016  triplus @ FreeCAD
 #
 #
-#This library is free software; you can redistribute it and/or
-#modify it under the terms of the GNU Lesser General Public
-#License as published by the Free Software Foundation; either
-#version 2.1 of the License, or (at your option) any later version.
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-#This library is distributed in the hope that it will be useful,
-#but WITHOUT ANY WARRANTY; without even the implied warranty of
-#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#Lesser General Public License for more details.
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-#You should have received a copy of the GNU Lesser General Public
-#License along with this library; if not, write to the Free Software
-#Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 
 from PySide import QtCore
@@ -337,6 +337,33 @@ def guiUp():
                 pass
 
         return toolbarList
+
+    def onToolBarOrientationChanged():
+        mw = FreeCADGui.getMainWindow()
+
+        for i in mw.findChildren(QtGui.QToolBar):
+            if i.objectName() == "TabBar":
+                if i.orientation() == QtCore.Qt.Orientation.Horizontal:
+                    for a in i.findChildren(QtGui.QToolButton):
+                        a.setProperty("toolbar_orientation", "horizontal")
+                        a.style().polish(a)
+                else:
+                    for a in i.findChildren(QtGui.QToolButton):
+                        a.setProperty("toolbar_orientation", "vertical")
+                        a.style().polish(a)
+            else:
+                pass
+
+    def findToolBar():
+        mw = FreeCADGui.getMainWindow()
+
+        for i in mw.findChildren(QtGui.QToolBar):
+            if i.objectName() == "TabBar":
+                i.orientationChanged.connect(onToolBarOrientationChanged)
+            else:
+                pass
+
+    findToolBar()
 
     def findDockWidget():
         mw = FreeCADGui.getMainWindow()
@@ -2002,6 +2029,11 @@ def guiUp():
 
         onTabChange(WorkbenchName)
 
+        if paramGet.GetString("GeneralSelectorMode") == "ToolBar":
+            onToolBarOrientationChanged()
+        else:
+            pass
+
     def onTabChange(activeWB):
         mw = FreeCADGui.getMainWindow()
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
@@ -2257,6 +2289,8 @@ def guiUp():
                     toolbar.addAction(menuAction)
                     menuButton = toolbar.widgetForAction(menuAction)
                     menuButton.setToolButtonStyle(QtCore.Qt.ToolButtonIconOnly)
+                    menuButton.setPopupMode(QtGui.QToolButton
+                                            .ToolButtonPopupMode.InstantPopup)
                 else:
                     pass
 
@@ -2438,6 +2472,8 @@ def guiUp():
                     i.setVisible(True)
                 else:
                     pass
+
+            onToolBarOrientationChanged()
 
         else:
             paramTBGet.SetBool("Active", 0)
