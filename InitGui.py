@@ -264,7 +264,7 @@ def guiUp():
 
         for i in wbList:
             action = QtGui.QAction(selectorActionGroupAll)
-            action.setObjectName(i)
+            action.setData(i)
             action.setCheckable(True)
             action.setText(wbList[i].MenuText)
 
@@ -278,7 +278,7 @@ def guiUp():
         activeWB = FreeCADGui.activeWorkbench().name()
 
         for i in selectorActionGroupAll.actions():
-            if i.objectName() == activeWB:
+            if i.data() == activeWB:
                 i.setChecked(True)
             else:
                 pass
@@ -408,7 +408,11 @@ def guiUp():
         radioSelectorModeToolBar = QtGui.QRadioButton("ToolBar")
 
         checkBoxSelectorOnly = QtGui.QCheckBox("Selector only")
-        checkBoxCompactMenu = QtGui.QCheckBox("Compact menu")
+        checkBoxSelectorMenuB = QtGui.QCheckBox("Selector menu")
+        checkBoxSelectorMenuBE = QtGui.QCheckBox("End")
+
+        checkBoxSelectorMenuTB = QtGui.QCheckBox("Selector menu")
+        checkBoxSelectorMenuTBE = QtGui.QCheckBox("End")
 
         buttonGlobalReset = QtGui.QToolButton()
         buttonGlobalReset.setText(u'\u27F3')
@@ -425,19 +429,40 @@ def guiUp():
         indentLayoutSelectorOnly = QtGui.QHBoxLayout()
         indentWidgetSelectorOnly.setLayout(indentLayoutSelectorOnly)
         indentLayoutSelectorOnly.addWidget(checkBoxSelectorOnly)
-        indentLayoutSelectorOnly.setContentsMargins(32, 0, 0, 0)
+        indentLayoutSelectorOnly.setContentsMargins(22, 0, 0, 0)
 
-        indentWidgetCompactMenu = QtGui.QWidget()
-        indentLayoutCompactMenu = QtGui.QHBoxLayout()
-        indentWidgetCompactMenu.setLayout(indentLayoutCompactMenu)
-        indentLayoutCompactMenu.addWidget(checkBoxCompactMenu)
-        indentLayoutCompactMenu.setContentsMargins(32, 0, 0, 0)
+        indentWidgetSelectorMenuB = QtGui.QWidget()
+        indentLayoutSelectorMenuB = QtGui.QHBoxLayout()
+        indentWidgetSelectorMenuB.setLayout(indentLayoutSelectorMenuB)
+        indentLayoutSelectorMenuB.addWidget(checkBoxSelectorMenuB)
+        indentLayoutSelectorMenuB.setContentsMargins(22, 0, 0, 0)
+
+        indentWidgetSelectorMenuBE = QtGui.QWidget()
+        indentLayoutSelectorMenuBE = QtGui.QHBoxLayout()
+        indentWidgetSelectorMenuBE.setLayout(indentLayoutSelectorMenuBE)
+        indentLayoutSelectorMenuBE.addWidget(checkBoxSelectorMenuBE)
+        indentLayoutSelectorMenuBE.setContentsMargins(44, 0, 0, 0)
+
+        indentWidgetSelectorMenuTB = QtGui.QWidget()
+        indentLayoutSelectorMenuTB = QtGui.QHBoxLayout()
+        indentWidgetSelectorMenuTB.setLayout(indentLayoutSelectorMenuTB)
+        indentLayoutSelectorMenuTB.addWidget(checkBoxSelectorMenuTB)
+        indentLayoutSelectorMenuTB.setContentsMargins(22, 0, 0, 0)
+
+        indentWidgetSelectorMenuTBE = QtGui.QWidget()
+        indentLayoutSelectorMenuTBE = QtGui.QHBoxLayout()
+        indentWidgetSelectorMenuTBE.setLayout(indentLayoutSelectorMenuTBE)
+        indentLayoutSelectorMenuTBE.addWidget(checkBoxSelectorMenuTBE)
+        indentLayoutSelectorMenuTBE.setContentsMargins(44, 0, 0, 0)
 
         layoutSelectorMode.addWidget(radioSelectorModeTabBar)
         layoutSelectorMode.addWidget(radioSelectorModeBar)
         layoutSelectorMode.addWidget(indentWidgetSelectorOnly)
+        layoutSelectorMode.addWidget(indentWidgetSelectorMenuB)
+        layoutSelectorMode.addWidget(indentWidgetSelectorMenuBE)
         layoutSelectorMode.addWidget(radioSelectorModeToolBar)
-        layoutSelectorMode.addWidget(indentWidgetCompactMenu)
+        layoutSelectorMode.addWidget(indentWidgetSelectorMenuTB)
+        layoutSelectorMode.addWidget(indentWidgetSelectorMenuTBE)
 
         layoutSelectorMode.addStretch(1)
         layoutSelectorMode.addWidget(resetWidget)
@@ -450,7 +475,10 @@ def guiUp():
             tbTabs.tabBar().show()
 
             checkBoxSelectorOnly.setEnabled(False)
-            checkBoxCompactMenu.setEnabled(False)
+            checkBoxSelectorMenuB.setEnabled(False)
+            checkBoxSelectorMenuBE.setEnabled(False)
+            checkBoxSelectorMenuTB.setEnabled(False)
+            checkBoxSelectorMenuTBE.setEnabled(False)
 
             pathGT = str("User parameter:BaseApp/Workbench/Global/Toolbar")
             paramGTGet = App.ParamGet(pathGT)
@@ -476,7 +504,10 @@ def guiUp():
             tbTabs.tabBar().hide()
 
             checkBoxSelectorOnly.setEnabled(True)
-            checkBoxCompactMenu.setEnabled(False)
+            checkBoxSelectorMenuB.setEnabled(True)
+            checkBoxSelectorMenuBE.setEnabled(True)
+            checkBoxSelectorMenuTB.setEnabled(False)
+            checkBoxSelectorMenuTBE.setEnabled(False)
 
             pathGT = str("User parameter:BaseApp/Workbench/Global/Toolbar")
             paramGTGet = App.ParamGet(pathGT)
@@ -502,7 +533,10 @@ def guiUp():
             tbTabs.tabBar().hide()
 
             checkBoxSelectorOnly.setEnabled(False)
-            checkBoxCompactMenu.setEnabled(True)
+            checkBoxSelectorMenuB.setEnabled(False)
+            checkBoxSelectorMenuBE.setEnabled(False)
+            checkBoxSelectorMenuTB.setEnabled(True)
+            checkBoxSelectorMenuTBE.setEnabled(True)
 
             pathGT = str("User parameter:BaseApp/Workbench/Global/Toolbar")
             paramGTGet = App.ParamGet(pathGT)
@@ -531,16 +565,49 @@ def guiUp():
 
         checkBoxSelectorOnly.toggled.connect(onCheckBoxSelectorOnly)
 
-        def onCheckBoxCompactMenu():
-            if checkBoxCompactMenu.isChecked():
-                paramGet.SetBool("CompactMenu", 1)
+        def onCheckBoxSelectorMenuB():
+            if checkBoxSelectorMenuB.isChecked():
+                paramGet.SetBool("SelectorMenuB", 1)
             else:
-                paramGet.SetBool("CompactMenu", 0)
+                paramGet.SetBool("SelectorMenuB", 0)
 
             activeWB = FreeCADGui.activeWorkbench().name()
             onSelector(activeWB)
 
-        checkBoxCompactMenu.toggled.connect(onCheckBoxCompactMenu)
+        checkBoxSelectorMenuB.toggled.connect(onCheckBoxSelectorMenuB)
+
+        def onCheckBoxSelectorMenuBE():
+            if checkBoxSelectorMenuBE.isChecked():
+                paramGet.SetBool("SelectorMenuBE", 1)
+            else:
+                paramGet.SetBool("SelectorMenuBE", 0)
+
+            activeWB = FreeCADGui.activeWorkbench().name()
+            onSelector(activeWB)
+
+        checkBoxSelectorMenuBE.toggled.connect(onCheckBoxSelectorMenuBE)
+
+        def onCheckBoxSelectorMenuTB():
+            if checkBoxSelectorMenuTB.isChecked():
+                paramGet.SetBool("SelectorMenuTB", 1)
+            else:
+                paramGet.SetBool("SelectorMenuTB", 0)
+
+            activeWB = FreeCADGui.activeWorkbench().name()
+            onSelector(activeWB)
+
+        checkBoxSelectorMenuTB.toggled.connect(onCheckBoxSelectorMenuTB)
+
+        def onCheckBoxSelectorMenuTBE():
+            if checkBoxSelectorMenuTBE.isChecked():
+                paramGet.SetBool("SelectorMenuTBE", 1)
+            else:
+                paramGet.SetBool("SelectorMenuTBE", 0)
+
+            activeWB = FreeCADGui.activeWorkbench().name()
+            onSelector(activeWB)
+
+        checkBoxSelectorMenuTBE.toggled.connect(onCheckBoxSelectorMenuTBE)
 
         def onButtonGlobalReset():
             paramGetBaseApp = App.ParamGet("User parameter:BaseApp")
@@ -580,8 +647,23 @@ def guiUp():
         else:
             pass
 
-        if paramGet.GetBool("CompactMenu"):
-            checkBoxCompactMenu.setChecked(True)
+        if paramGet.GetBool("SelectorMenuB"):
+            checkBoxSelectorMenuB.setChecked(True)
+        else:
+            pass
+
+        if paramGet.GetBool("SelectorMenuBE"):
+            checkBoxSelectorMenuBE.setChecked(True)
+        else:
+            pass
+
+        if paramGet.GetBool("SelectorMenuTB"):
+            checkBoxSelectorMenuTB.setChecked(True)
+        else:
+            pass
+
+        if paramGet.GetBool("SelectorMenuTBE"):
+            checkBoxSelectorMenuTBE.setChecked(True)
         else:
             pass
 
@@ -838,14 +920,14 @@ def guiUp():
         selectorButton = QtGui.QToolButton()
         selectorButton.setAutoRaise(True)
         selectorButton.setPopupMode(QtGui.QToolButton
-                                    .ToolButtonPopupMode.MenuButtonPopup)
+                                    .ToolButtonPopupMode.InstantPopup)
         selectorMenu = QtGui.QMenu()
         selectorButton.setMenu(selectorMenu)
         selectorList = sorted(FreeCADGui.listWorkbenches())
 
         selectorActions = {}
         for i in getSelectorActionGroupAll().actions():
-            selectorActions[i.objectName()] = i
+            selectorActions[i.data()] = i
 
         selectorGroup = QtGui.QActionGroup(selectorMenu)
 
@@ -857,7 +939,6 @@ def guiUp():
                 selectorAction = QtGui.QAction(selectorGroup)
                 selectorAction.setIcon(selectorActions[i].icon())
                 selectorAction.setText(selectorActions[i].text())
-                selectorAction.setObjectName(selectorActions[i].objectName())
                 selectorAction.setCheckable(True)
                 selectorMenu.addAction(selectorAction)
                 if selectorActions[i].isChecked():
@@ -2158,7 +2239,7 @@ def guiUp():
             selectorActions = {}
             for i in wbList:
                 action = QtGui.QAction(selectorGroup)
-                action.setObjectName(i)
+                action.setData(i)
                 action.setCheckable(True)
                 action.setText(wbList[i].MenuText)
 
@@ -2169,7 +2250,7 @@ def guiUp():
 
                 action.setIcon(icon)
 
-                selectorActions[action.objectName()] = action
+                selectorActions[action.data()] = action
 
             if mode != 1:
                 for i in wbListSorted:
@@ -2181,7 +2262,7 @@ def guiUp():
                 pass
 
             for i in selectorGroup.actions():
-                if i.objectName() == activeWB:
+                if i.data() == activeWB:
                     i.setChecked(True)
                     if mode == 0:
                         selectorButton.setDefaultAction(i)
@@ -2196,7 +2277,7 @@ def guiUp():
             def onSelectorGroup():
 
                 if selectorGroup.checkedAction():
-                    onSelector(selectorGroup.checkedAction().objectName())
+                    onSelector(selectorGroup.checkedAction().data())
                 else:
                     pass
 
@@ -2210,7 +2291,7 @@ def guiUp():
 
                 tempList = {}
                 for i in selectorGroup.actions():
-                    tempList[i.objectName()] = i
+                    tempList[i.data()] = i
 
                 selectorList = []
                 for i in tabsList:
@@ -2227,7 +2308,13 @@ def guiUp():
 
         def selectorModeBar():
 
-            workbenchSelector()
+            if paramGet.GetBool("SelectorMenuB"):
+                if not paramGet.GetBool("SelectorMenuBE"):
+                    workbenchSelector()
+                else:
+                    pass
+            else:
+                pass
 
             for i in workbenchSelector(mode=1):
                 toolButton = QtGui.QToolButton()
@@ -2236,6 +2323,14 @@ def guiUp():
                 toolButton.installEventFilter((InstallEvent
                                               .InstallEvent(toolButton)))
                 layout.addWidget(toolButton)
+
+            if paramGet.GetBool("SelectorMenuB"):
+                if paramGet.GetBool("SelectorMenuBE"):
+                    workbenchSelector()
+                else:
+                    pass
+            else:
+                pass
 
         def selectorModeToolBar(mode=0):
 
@@ -2284,18 +2379,26 @@ def guiUp():
                     else:
                         pass
 
-                if paramGet.GetBool("CompactMenu"):
+                selectorActions = workbenchSelector(mode=1)
+
+                if paramGet.GetBool("SelectorMenuTB"):
                     menuAction = workbenchSelector(mode=2)
-                    toolbar.addAction(menuAction)
+                    if paramGet.GetBool("SelectorMenuTBE"):
+                        selectorActions.append(menuAction)
+                    else:
+                        selectorActions.insert(0, menuAction)
+                else:
+                    pass
+
+                for i in selectorActions:
+                    toolbar.addAction(i)
+
+                if paramGet.GetBool("SelectorMenuTB"):
                     menuButton = toolbar.widgetForAction(menuAction)
-                    menuButton.setToolButtonStyle(QtCore.Qt.ToolButtonIconOnly)
                     menuButton.setPopupMode(QtGui.QToolButton
                                             .ToolButtonPopupMode.InstantPopup)
                 else:
                     pass
-
-                for i in workbenchSelector(mode=1):
-                    toolbar.addAction(i)
 
                 prefAction = QtGui.QAction(toolbar)
                 menu = quickMenu(mode=1)
@@ -2305,7 +2408,7 @@ def guiUp():
                 prefButton = toolbar.widgetForAction(prefAction)
                 prefButton.setAutoRaise(True)
                 prefButton.setIcon(QtGui.QIcon(QtGui.QPixmap(settingsIcon)))
-                prefButton.setToolButtonStyle(QtCore.Qt.ToolButtonIconOnly)
+                prefButton.setText("Preferences")
                 prefButton.setPopupMode(QtGui.QToolButton
                                         .ToolButtonPopupMode.InstantPopup)
             except NameError:
@@ -2443,11 +2546,11 @@ def guiUp():
 
         autoloadModules()
 
-        def onSelectorActionGroup():
-            checkedAction = selectorActionGroup.checkedAction().objectName()
-            onSelector(checkedAction, mode=1)
+        def onWorkbencActivated(name):
 
-        selectorActionGroup.triggered.connect(onSelectorActionGroup)
+            onSelector(name, mode=1)
+
+        mw.workbenchActivated.connect(onWorkbencActivated)
 
         activeWB = FreeCADGui.activeWorkbench().name()
         onSelector(activeWB, mode=1)
