@@ -368,9 +368,7 @@ def guiUp():
     def findDockWidget():
         mw = FreeCADGui.getMainWindow()
 
-        for i in mw.findChildren(QtGui.QDockWidget):
-            if i.objectName() == "TabBar":
-                dockWidget = i
+        dockWidget = mw.findChild(QtGui.QDockWidget, "TabBar")
         return dockWidget
 
     tbDock = findDockWidget()
