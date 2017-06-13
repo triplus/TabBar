@@ -1,5 +1,5 @@
 # TabBar widget for FreeCAD
-# Copyright (C) 2015, 2016  triplus @ FreeCAD
+# Copyright (C) 2015, 2016, 2017 triplus @ FreeCAD
 #
 #
 # This library is free software; you can redistribute it and/or
@@ -17,10 +17,9 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 
-from PySide import QtCore
-
-
 def beforeStart():
+    import FreeCAD as App
+
     paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
     paramGet.RemBool("AddRemove")
 
@@ -33,9 +32,10 @@ beforeStart()
 
 
 def singleInstance():
+    import FreeCADGui as Gui
     from PySide import QtGui
 
-    mw = FreeCADGui.getMainWindow()
+    mw = Gui.getMainWindow()
     if mw:
         for i in mw.findChildren(QtGui.QDockWidget):
             if i.objectName() == "TabBar":
@@ -45,13 +45,14 @@ singleInstance()
 
 
 def dockWidget():
+    import FreeCADGui as Gui
     from PySide import QtGui
     from PySide import QtCore
 
     widget = QtGui.QDockWidget()
     widget.setWindowTitle("TabBar")
     widget.setObjectName("TabBar")
-    mw = FreeCADGui.getMainWindow()
+    mw = Gui.getMainWindow()
     if mw:
         mw.addDockWidget(QtCore.Qt.TopDockWidgetArea, widget)
     return widget
@@ -60,10 +61,13 @@ dockWidget()
 
 
 def guiUp():
+    import FreeCADGui as Gui
+    import FreeCAD as App
     from PySide import QtCore
     from PySide import QtGui
     import FlowLayout
     import InstallEvent
+    import TabBarLocator
 
     noneIcon = ['16 16 3 1',
                 ' 	c None',
@@ -215,8 +219,9 @@ def guiUp():
         }
         """)
 
+    mw = Gui.getMainWindow()
+
     def getSelectorActionGroup():
-        mw = FreeCADGui.getMainWindow()
         paramGeneralGet = App.ParamGet("User parameter:BaseApp/Workbenches")
 
         actionList = {}
@@ -252,12 +257,9 @@ def guiUp():
 
         return actionGroup
 
-    selectorActionGroup = getSelectorActionGroup()
-
     def getSelectorActionGroupAll():
-        mw = FreeCADGui.getMainWindow()
 
-        wbList = FreeCADGui.listWorkbenches()
+        wbList = Gui.listWorkbenches()
         wbListSorted = sorted(wbList)
 
         selectorActionGroupAll = QtGui.QActionGroup(mw)
@@ -275,7 +277,7 @@ def guiUp():
 
             action.setIcon(icon)
 
-        activeWB = FreeCADGui.activeWorkbench().name()
+        activeWB = Gui.activeWorkbench().name()
 
         for i in selectorActionGroupAll.actions():
             if i.data() == activeWB:
@@ -311,7 +313,6 @@ def guiUp():
         return icon
 
     def wbToolbars():
-        mw = FreeCADGui.getMainWindow()
 
         for i in mw.findChildren(QtGui.QAction):
             if i.objectName() == "Std_ToolBarMenu":
@@ -339,7 +340,6 @@ def guiUp():
         return toolbarList
 
     def onToolBarOrientationChanged():
-        mw = FreeCADGui.getMainWindow()
 
         for i in mw.findChildren(QtGui.QToolBar):
             if i.objectName() == "TabBar":
@@ -355,7 +355,6 @@ def guiUp():
                 pass
 
     def findToolBar():
-        mw = FreeCADGui.getMainWindow()
 
         for i in mw.findChildren(QtGui.QToolBar):
             if i.objectName() == "TabBar":
@@ -363,10 +362,7 @@ def guiUp():
             else:
                 pass
 
-    findToolBar()
-
     def findDockWidget():
-        mw = FreeCADGui.getMainWindow()
 
         dockWidget = mw.findChild(QtGui.QDockWidget, "TabBar")
         return dockWidget
@@ -392,7 +388,6 @@ def guiUp():
     tbDockTitleBar = tbDock.titleBarWidget()
 
     def tabPrefGeneral():
-        mw = FreeCADGui.getMainWindow()
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
         pathTB = str("User parameter:BaseApp/Workbench/Global/Toolbar/TabBar")
         paramTBGet = App.ParamGet(pathTB)
@@ -489,7 +484,7 @@ def guiUp():
                 else:
                     pass
 
-            activeWB = FreeCADGui.activeWorkbench().name()
+            activeWB = Gui.activeWorkbench().name()
             onSelector(activeWB)
 
         radioSelectorModeTabBar.toggled.connect(onRadioSelectorModeTabBar)
@@ -518,7 +513,7 @@ def guiUp():
                 else:
                     pass
 
-            activeWB = FreeCADGui.activeWorkbench().name()
+            activeWB = Gui.activeWorkbench().name()
             onSelector(activeWB)
 
         radioSelectorModeBar.toggled.connect(onRadioSelectorModeBar)
@@ -547,7 +542,7 @@ def guiUp():
                 else:
                     pass
 
-            activeWB = FreeCADGui.activeWorkbench().name()
+            activeWB = Gui.activeWorkbench().name()
             onSelector(activeWB)
 
         radioSelectorModeToolBar.toggled.connect(onRadioSelectorModeToolBar)
@@ -558,7 +553,7 @@ def guiUp():
             else:
                 paramGet.SetBool("SelectorOnly", 0)
 
-            activeWB = FreeCADGui.activeWorkbench().name()
+            activeWB = Gui.activeWorkbench().name()
             onSelector(activeWB)
 
         checkBoxSelectorOnly.toggled.connect(onCheckBoxSelectorOnly)
@@ -569,7 +564,7 @@ def guiUp():
             else:
                 paramGet.SetBool("SelectorMenuB", 0)
 
-            activeWB = FreeCADGui.activeWorkbench().name()
+            activeWB = Gui.activeWorkbench().name()
             onSelector(activeWB)
 
         checkBoxSelectorMenuB.toggled.connect(onCheckBoxSelectorMenuB)
@@ -580,7 +575,7 @@ def guiUp():
             else:
                 paramGet.SetBool("SelectorMenuBE", 0)
 
-            activeWB = FreeCADGui.activeWorkbench().name()
+            activeWB = Gui.activeWorkbench().name()
             onSelector(activeWB)
 
         checkBoxSelectorMenuBE.toggled.connect(onCheckBoxSelectorMenuBE)
@@ -591,7 +586,7 @@ def guiUp():
             else:
                 paramGet.SetBool("SelectorMenuTB", 0)
 
-            activeWB = FreeCADGui.activeWorkbench().name()
+            activeWB = Gui.activeWorkbench().name()
             onSelector(activeWB)
 
         checkBoxSelectorMenuTB.toggled.connect(onCheckBoxSelectorMenuTB)
@@ -602,7 +597,7 @@ def guiUp():
             else:
                 paramGet.SetBool("SelectorMenuTBE", 0)
 
-            activeWB = FreeCADGui.activeWorkbench().name()
+            activeWB = Gui.activeWorkbench().name()
             onSelector(activeWB)
 
         checkBoxSelectorMenuTBE.toggled.connect(onCheckBoxSelectorMenuTBE)
@@ -617,7 +612,7 @@ def guiUp():
             tbDock.setTitleBarWidget(tbDockTitleBar)
             tbTabs.setTabPosition(QtGui.QTabWidget.North)
 
-            activeWB = FreeCADGui.activeWorkbench().name()
+            activeWB = Gui.activeWorkbench().name()
             onSelector(activeWB)
 
             onControl()
@@ -668,12 +663,14 @@ def guiUp():
         return widgetGeneral
 
     def tabPrefToolbar():
-        mw = FreeCADGui.getMainWindow()
         paramTBGet = App.ParamGet("User parameter:BaseApp/TabBar/Toolbars")
 
         activeWBLabel = QtGui.QLabel()
         menuText = Gui.activeWorkbench().MenuText
-        activeWBLabel.setText(menuText.decode("UTF-8"))
+        try:
+            activeWBLabel.setText(menuText.decode("UTF-8"))
+        except AttributeError:
+            activeWBLabel.setText(menuText)
         activeWBLabel.setWordWrap(1)
         activeWBLabel.setFrameStyle(QtGui.QFrame.StyledPanel)
 
@@ -681,7 +678,7 @@ def guiUp():
         toolbarLocal.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
 
         def setActiveWB(activeWB):
-            checkActiveWB = FreeCADGui.activeWorkbench().name()
+            checkActiveWB = Gui.activeWorkbench().name()
 
             if checkActiveWB != activeWB:
                 onSelector(activeWB)
@@ -691,7 +688,7 @@ def guiUp():
         def activeWBLabelText():
             text = activeWBLabel.text()
 
-            wbList = FreeCADGui.listWorkbenches()
+            wbList = Gui.listWorkbenches()
 
             for i in wbList:
                 if wbList[i].MenuText == text:
@@ -770,7 +767,7 @@ def guiUp():
                 item.setCheckState(QtCore.Qt.CheckState(2))
 
             items = []
-            for index in xrange(toolbarLocal.count()):
+            for index in range(toolbarLocal.count()):
                 items.append(toolbarLocal.item(index))
 
             for i in items:
@@ -787,7 +784,7 @@ def guiUp():
             activeWB = activeWBLabelText()
 
             items = []
-            for index in xrange(toolbarLocal.count()):
+            for index in range(toolbarLocal.count()):
                 items.append(toolbarLocal.item(index))
 
             checkList = []
@@ -847,7 +844,7 @@ def guiUp():
                 item.setIcon(QtGui.QIcon(QtGui.QPixmap(indicatorBlue)))
 
             items = []
-            for index in xrange(toolbarExternal.count()):
+            for index in range(toolbarExternal.count()):
                 items.append(toolbarExternal.item(index))
 
             for i in items:
@@ -865,7 +862,7 @@ def guiUp():
             setActiveWB(activeWB)
 
             items = []
-            for index in xrange(toolbarExternal.count()):
+            for index in range(toolbarExternal.count()):
                 items.append(toolbarExternal.item(index))
 
             checkListOn = []
@@ -919,9 +916,9 @@ def guiUp():
         selectorButton.setAutoRaise(True)
         selectorButton.setPopupMode(QtGui.QToolButton
                                     .ToolButtonPopupMode.InstantPopup)
-        selectorMenu = QtGui.QMenu()
+        selectorMenu = QtGui.QMenu(mw)
         selectorButton.setMenu(selectorMenu)
-        selectorList = sorted(FreeCADGui.listWorkbenches())
+        selectorList = sorted(Gui.listWorkbenches())
 
         selectorActions = {}
         for i in getSelectorActionGroupAll().actions():
@@ -950,7 +947,10 @@ def guiUp():
 
         def onSelectorGroup():
             menuText = selectorGroup.checkedAction().text()
-            activeWBLabel.setText(menuText.decode("UTF-8"))
+            try:
+                activeWBLabel.setText(menuText.decode("UTF-8"))
+            except AttributeError:
+                activeWBLabel.setText(menuText)
             defaultAction.setIcon(selectorGroup.checkedAction().icon())
             toolbarListLocal()
             toolbarListExternal()
@@ -980,7 +980,10 @@ def guiUp():
         def onButtonLeft():
             tbTabs.setCurrentIndex(tbTabs.currentIndex() - 1)
             menuText = Gui.activeWorkbench().MenuText
-            activeWBLabel.setText(menuText.decode("UTF-8"))
+            try:
+                activeWBLabel.setText(menuText.decode("UTF-8"))
+            except AttributeError:
+                activeWBLabel.setText(menuText)
             toolbarListLocal()
             toolbarListExternal()
             for i in selectorGroup.actions():
@@ -995,7 +998,10 @@ def guiUp():
         def onButtonRight():
             tbTabs.setCurrentIndex(tbTabs.currentIndex() + 1)
             menuText = Gui.activeWorkbench().MenuText
-            activeWBLabel.setText(menuText.decode("UTF-8"))
+            try:
+                activeWBLabel.setText(menuText.decode("UTF-8"))
+            except:
+                activeWBLabel.setText(menuText)
             toolbarListLocal()
             toolbarListExternal()
             for i in selectorGroup.actions():
@@ -1017,7 +1023,7 @@ def guiUp():
                 toolbarLocal.setCurrentRow(currentIndex - 1)
 
                 items = []
-                for index in xrange(toolbarLocal.count()):
+                for index in range(toolbarLocal.count()):
                     items.append(toolbarLocal.item(index))
 
                 toolbarData = []
@@ -1042,7 +1048,7 @@ def guiUp():
                 toolbarLocal.setCurrentRow(currentIndex + 1)
 
                 items = []
-                for index in xrange(toolbarLocal.count()):
+                for index in range(toolbarLocal.count()):
                     items.append(toolbarLocal.item(index))
 
                 toolbarData = []
@@ -1074,7 +1080,7 @@ def guiUp():
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
 
         def onButtonExternalGetAll():
-            activeWB = FreeCADGui.activeWorkbench().name()
+            activeWB = Gui.activeWorkbench().name()
 
             progressBar = QtGui.QProgressBar(activeWBLabel)
             progressBar.setMinimumSize(activeWBLabel.size())
@@ -1082,7 +1088,7 @@ def guiUp():
             progressBar.show()
 
             wbList = []
-            for i in FreeCADGui.listWorkbenches():
+            for i in Gui.listWorkbenches():
                 wbList.append(i)
 
             wbList.remove(activeWB)
@@ -1093,9 +1099,9 @@ def guiUp():
             for i in wbList:
                 n = n + 1
                 progressBar.setValue(n)
-                FreeCADGui.activateWorkbench(i)
+                Gui.activateWorkbench(i)
 
-            FreeCADGui.activateWorkbench(activeWB)
+            Gui.activateWorkbench(activeWB)
 
             progressBar.hide()
             progressBar.deleteLater()
@@ -1156,7 +1162,6 @@ def guiUp():
         return widgetToolbar
 
     def tabPrefSelector():
-        mw = FreeCADGui.getMainWindow()
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
         paramGeneralGet = App.ParamGet("User parameter:BaseApp/Workbenches")
 
@@ -1195,7 +1200,7 @@ def guiUp():
             def sortedList():
                 selectorList.clear()
 
-                wbList = FreeCADGui.listWorkbenches()
+                wbList = Gui.listWorkbenches()
                 wbListSorted = sorted(wbList)
 
                 for i in wbListSorted:
@@ -1210,7 +1215,7 @@ def guiUp():
                                    .rsplit(',', 1)[0])
                                    .split(","))
 
-                    tempWBList = FreeCADGui.listWorkbenches()
+                    tempWBList = Gui.listWorkbenches()
 
                     selectorList.clear()
 
@@ -1228,7 +1233,7 @@ def guiUp():
                     listCustom = paramGet.GetString("SelectorList")
                     listCustom = listCustom.split(".,.")
 
-                    tempWBList = FreeCADGui.listWorkbenches()
+                    tempWBList = Gui.listWorkbenches()
 
                     selectorList.clear()
 
@@ -1246,10 +1251,10 @@ def guiUp():
             selectorList.blockSignals(False)
 
         def onMakeSelectorList():
-            activeWB = FreeCADGui.activeWorkbench().name()
+            activeWB = Gui.activeWorkbench().name()
 
             items = []
-            for index in xrange(selectorList.count()):
+            for index in range(selectorList.count()):
                 items.append(selectorList.item(index))
 
             checkListOff = []
@@ -1290,7 +1295,7 @@ def guiUp():
         buttonSelectorToggle = QtGui.QToolButton()
 
         def onRadioSelectorDefault():
-            activeWB = FreeCADGui.activeWorkbench().name()
+            activeWB = Gui.activeWorkbench().name()
 
             buttonSelectorUp.setEnabled(False)
             buttonSelectorDown.setEnabled(False)
@@ -1309,7 +1314,7 @@ def guiUp():
         radioSelectorDefault.clicked.connect(onRadioSelectorDefault)
 
         def onRadioSelectorCustom():
-            activeWB = FreeCADGui.activeWorkbench().name()
+            activeWB = Gui.activeWorkbench().name()
 
             buttonSelectorUp.setEnabled(True)
             buttonSelectorDown.setEnabled(True)
@@ -1328,7 +1333,7 @@ def guiUp():
         radioSelectorCustom.clicked.connect(onRadioSelectorCustom)
 
         def onButtonSelectorUp():
-            activeWB = FreeCADGui.activeWorkbench().name()
+            activeWB = Gui.activeWorkbench().name()
             currentIndex = selectorList.currentRow()
 
             if currentIndex != 0:
@@ -1337,7 +1342,7 @@ def guiUp():
                 selectorList.setCurrentRow(currentIndex - 1)
 
                 items = []
-                for index in xrange(selectorList.count()):
+                for index in range(selectorList.count()):
                     items.append(selectorList.item(index))
 
                 selectorListData = []
@@ -1358,7 +1363,7 @@ def guiUp():
         buttonSelectorUp.clicked.connect(onButtonSelectorUp)
 
         def onButtonSelectorDown():
-            activeWB = FreeCADGui.activeWorkbench().name()
+            activeWB = Gui.activeWorkbench().name()
             currentIndex = selectorList.currentRow()
 
             if currentIndex != selectorList.count() - 1:
@@ -1367,7 +1372,7 @@ def guiUp():
                 selectorList.setCurrentRow(currentIndex + 1)
 
                 items = []
-                for index in xrange(selectorList.count()):
+                for index in range(selectorList.count()):
                     items.append(selectorList.item(index))
 
                 selectorListData = []
@@ -1388,7 +1393,7 @@ def guiUp():
         buttonSelectorDown.clicked.connect(onButtonSelectorDown)
 
         def onButtonSelectorReset():
-            activeWB = FreeCADGui.activeWorkbench().name()
+            activeWB = Gui.activeWorkbench().name()
             paramGet.RemString("SelectorList")
             paramGet.RemString("SelectorList-Off")
             makeSelectorList()
@@ -1471,9 +1476,9 @@ def guiUp():
             paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
 
             if radioSelectorStyleIconText.isChecked():
-                for i in xrange(tbTabs.count()):
+                for i in range(tbTabs.count()):
                     try:
-                        icon = wbIcon((FreeCADGui
+                        icon = wbIcon((Gui
                                       .getWorkbench(tbTabs.widget(i)
                                        .objectName())).Icon)
                     except:
@@ -1483,7 +1488,7 @@ def guiUp():
                 paramGet.SetString("SelectorStyle", "IconText")
 
                 if paramGet.GetString("GeneralSelectorMode") == "ToolBar":
-                    activeWB = FreeCADGui.activeWorkbench().name()
+                    activeWB = Gui.activeWorkbench().name()
                     onSelector(activeWB)
                 else:
                     pass
@@ -1496,9 +1501,9 @@ def guiUp():
             paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
 
             if radioSelectorStyleIcon.isChecked():
-                for i in xrange(tbTabs.count()):
+                for i in range(tbTabs.count()):
                     try:
-                        icon = wbIcon((FreeCADGui
+                        icon = wbIcon((Gui
                                       .getWorkbench(tbTabs.widget(i)
                                        .objectName())).Icon)
                     except:
@@ -1508,7 +1513,7 @@ def guiUp():
                 paramGet.SetString("SelectorStyle", "Icon")
 
                 if paramGet.GetString("GeneralSelectorMode") == "ToolBar":
-                    activeWB = FreeCADGui.activeWorkbench().name()
+                    activeWB = Gui.activeWorkbench().name()
                     onSelector(activeWB)
                 else:
                     pass
@@ -1521,13 +1526,13 @@ def guiUp():
             paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
 
             if radioSelectorStyleText.isChecked():
-                for i in xrange(tbTabs.count()):
+                for i in range(tbTabs.count()):
                     tbTabs.setTabIcon(i, QtGui.QIcon())
                     tbTabs.setTabText(i, tbTabs.widget(i).windowTitle())
                 paramGet.SetString("SelectorStyle", "Text")
 
                 if paramGet.GetString("GeneralSelectorMode") == "ToolBar":
-                    activeWB = FreeCADGui.activeWorkbench().name()
+                    activeWB = Gui.activeWorkbench().name()
                     onSelector(activeWB)
                 else:
                     pass
@@ -1576,7 +1581,7 @@ def guiUp():
             pass
 
         def workbenchList():
-            listWorkbenches = FreeCADGui.listWorkbenches()
+            listWorkbenches = Gui.listWorkbenches()
             wbListSorted = sorted(listWorkbenches)
 
             for i in wbListSorted:
@@ -1609,7 +1614,7 @@ def guiUp():
                     autoLoad.append(listWorkbenches[i].MenuText)
 
             item = []
-            for i in xrange(wbList.count()):
+            for i in range(wbList.count()):
                 item.append(wbList.item(i))
 
             for i in item:
@@ -1619,10 +1624,10 @@ def guiUp():
         workbenchList()
 
         def onWorkbenchList():
-            listWorkbenches = FreeCADGui.listWorkbenches()
+            listWorkbenches = Gui.listWorkbenches()
 
             item = []
-            for i in xrange(wbList.count()):
+            for i in range(wbList.count()):
                 item.append(wbList.item(i))
 
             checkList = []
@@ -1648,7 +1653,6 @@ def guiUp():
         return widgetAutoload
 
     def onControl():
-        mw = FreeCADGui.getMainWindow()
 
         for i in mw.findChildren(QtGui.QDialog):
             if i.objectName() == "tbPreferences":
@@ -1672,7 +1676,6 @@ def guiUp():
         tbPrefTabs.addTab(tabPrefAutoload(), "Autoload")
 
     def showHideToolBars(mode=0):
-        mw = FreeCADGui.getMainWindow()
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
 
         for i in mw.findChildren(QtGui.QAction):
@@ -1722,7 +1725,7 @@ def guiUp():
     def quickMenu(mode=0):
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
 
-        menu = QtGui.QMenu()
+        menu = QtGui.QMenu(mw)
         menu.setStyleSheet(quickMenuStyle)
 
         lockAction = QtGui.QAction(menu)
@@ -1731,7 +1734,7 @@ def guiUp():
 
         toolbarsAction = QtGui.QAction(menu)
         toolbarsAction.setIconText("Toolbars")
-        toolbarsMenu = QtGui.QMenu()
+        toolbarsMenu = QtGui.QMenu(mw)
         toolbarsAction.setMenu(toolbarsMenu)
 
         showAction = QtGui.QAction(toolbarsMenu)
@@ -1886,8 +1889,7 @@ def guiUp():
             return menuButton
 
     def tabsList(activeWB):
-        mw = FreeCADGui.getMainWindow()
-        wbList = FreeCADGui.listWorkbenches()
+        wbList = Gui.listWorkbenches()
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
         paramWBGet = App.ParamGet("User parameter:BaseApp/Workbenches")
         paramGen = App.ParamGet("User parameter:BaseApp/Preferences/General")
@@ -1961,7 +1963,7 @@ def guiUp():
         sortedWBList = tabsList(WorkbenchName)
 
         tbTabsList = {}
-        for i in xrange(tbTabs.count()):
+        for i in range(tbTabs.count()):
             a = tbTabs.widget(i).objectName()
             b = tbTabs.indexOf(tbTabs.widget(i))
             tbTabsList[a] = b
@@ -1976,12 +1978,12 @@ def guiUp():
 
     def addTabs(WorkbenchName):
         sortedWBList = tabsList(WorkbenchName)
-        wbList = FreeCADGui.listWorkbenches()
+        wbList = Gui.listWorkbenches()
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
         paramGen = App.ParamGet("User parameter:BaseApp/Preferences/General")
 
         tbTabsList = []
-        for i in xrange(tbTabs.count()):
+        for i in range(tbTabs.count()):
             tbTabsList.append(tbTabs.widget(i).objectName())
 
         tbTabs.blockSignals(True)
@@ -2031,7 +2033,7 @@ def guiUp():
             widget.setLayout(layout)
 
             try:
-                FreeCADGui.activateWorkbench("NoneWorkbench")
+                Gui.activateWorkbench("NoneWorkbench")
             except:
                 pass
 
@@ -2053,7 +2055,6 @@ def guiUp():
         tbTabs.blockSignals(False)
 
     def onSelector(WorkbenchName, mode=0):
-        mw = FreeCADGui.getMainWindow()
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
 
         if WorkbenchName is "None":
@@ -2061,8 +2062,9 @@ def guiUp():
         else:
             if mode == 0:
                 currentAction = None
-                activeWB = FreeCADGui.activeWorkbench()
+                activeWB = Gui.activeWorkbench()
                 command = str('Gui.activateWorkbench("' + WorkbenchName + '")')
+                selectorActionGroup = getSelectorActionGroup()
 
                 if activeWB.name() != WorkbenchName:
                     for i in selectorActionGroup.actions():
@@ -2074,14 +2076,14 @@ def guiUp():
                     if currentAction is not None:
                         currentAction.trigger()
                     else:
-                        FreeCADGui.doCommand(command)
+                        Gui.doCommand(command)
                 else:
                     pass
             else:
                 pass
 
             scrollList = []
-            for i in xrange(tbTabs.count()):
+            for i in range(tbTabs.count()):
                 scrollList.append(tbTabs.widget(i).objectName())
 
             if paramGet.GetBool("AddRemove"):
@@ -2114,7 +2116,6 @@ def guiUp():
             pass
 
     def onTabChange(activeWB):
-        mw = FreeCADGui.getMainWindow()
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
         paramTBGet = App.ParamGet("User parameter:BaseApp/TabBar/Toolbars")
         paramGen = App.ParamGet("User parameter:BaseApp/Preferences/General")
@@ -2210,7 +2211,7 @@ def guiUp():
 
         def workbenchSelector(mode=0):
 
-            selectorMenu = QtGui.QMenu()
+            selectorMenu = QtGui.QMenu(mw)
 
             if mode == 0:
                 selectorButton = QtGui.QToolButton()
@@ -2226,7 +2227,7 @@ def guiUp():
             else:
                 pass
 
-            wbList = FreeCADGui.listWorkbenches()
+            wbList = Gui.listWorkbenches()
             wbListSorted = sorted(wbList)
 
             if mode == 1:
@@ -2284,7 +2285,7 @@ def guiUp():
             if mode == 1:
 
                 tabsList = []
-                for i in xrange(tbTabs.count()):
+                for i in range(tbTabs.count()):
                     tabsList.append(tbTabs.widget(i).objectName())
 
                 tempList = {}
@@ -2410,7 +2411,7 @@ def guiUp():
                 prefButton.setPopupMode(QtGui.QToolButton
                                         .ToolButtonPopupMode.InstantPopup)
             except NameError:
-                print "TabBar: No toolbar named TabBar!"
+                print("TabBar: No toolbar named TabBar!")
 
         def buttonAdd(i):
 
@@ -2496,7 +2497,6 @@ def guiUp():
     tbTabs.currentChanged.connect(onTabs)
 
     def afterStart():
-        mw = FreeCADGui.getMainWindow()
         paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
         pathTB = str("User parameter:BaseApp/Workbench/Global/Toolbar/TabBar")
         paramTBGet = App.ParamGet(pathTB)
@@ -2519,7 +2519,7 @@ def guiUp():
             tbDock.setTitleBarWidget(tbDockTitleBar)
 
         def autoloadModules():
-            listWorkbenches = FreeCADGui.listWorkbenches()
+            listWorkbenches = Gui.listWorkbenches()
             modulesList = (paramGet.GetString("LoadModules")).split(",")
 
             paramGenGet = App.ParamGet("User parameter"
@@ -2550,7 +2550,7 @@ def guiUp():
 
         mw.workbenchActivated.connect(onWorkbencActivated)
 
-        activeWB = FreeCADGui.activeWorkbench().name()
+        activeWB = Gui.activeWorkbench().name()
         onSelector(activeWB, mode=1)
 
         if paramGet.GetString("GeneralSelectorMode") == "Bar":
@@ -2585,10 +2585,25 @@ def guiUp():
                 else:
                     pass
 
-    afterStart()
+    def onStart():
+        """Start TabBar."""
 
-timer = QtCore.QTimer()
-timer.setSingleShot(True)
-timer.timeout.connect(guiUp)
-timer.start(1000)
-FreeCAD.timer = timer
+        start = False
+        try:
+            mw.workbenchActivated
+            start = True
+        except AttributeError:
+            pass
+
+        if start:
+            timer.stop()
+            timer.deleteLater()
+            findToolBar()
+            afterStart()
+
+    timer = TabBarLocator.delayTimer()
+    timer.timeout.connect(onStart)
+    timer.start(500)
+
+
+guiUp()
