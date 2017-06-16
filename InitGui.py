@@ -314,28 +314,28 @@ def guiUp():
 
     def wbToolbars():
 
+        toolbarList = []
         for i in mw.findChildren(QtGui.QAction):
             if i.objectName() == "Std_ToolBarMenu":
                 menu = i.menu()
 
-        tempButton = QtGui.QPushButton(mw)
-        tempButton.clicked.connect(menu.aboutToShow)
-        tempButton.click()
-        tempButton.deleteLater()
+                tempButton = QtGui.QPushButton(mw)
+                tempButton.clicked.connect(menu.aboutToShow)
+                tempButton.click()
+                tempButton.deleteLater()
 
-        toolbarList = []
-        menuActions = menu.actions()
-        for i in menuActions:
-            if i.isEnabled():
-                toolbarList.append(i.text())
-            else:
-                pass
+                menuActions = menu.actions()
+                for i in menuActions:
+                    if i.isEnabled():
+                        toolbarList.append(i.text())
+                    else:
+                        pass
 
-        for i in toolbarList:
-            if i == "TabBar":
-                toolbarList.remove(i)
-            else:
-                pass
+                for i in toolbarList:
+                    if i == "TabBar":
+                        toolbarList.remove(i)
+                    else:
+                        pass
 
         return toolbarList
 
