@@ -23,6 +23,16 @@ def beforeStart():
     paramGet = App.ParamGet("User parameter:BaseApp/TabBar")
     paramGet.RemBool("AddRemove")
 
+    pathTB = "User parameter:BaseApp/Workbench/Global/Toolbar"
+    paramTBGet = App.ParamGet(pathTB)
+    n = 1
+    while n and n < 30:
+        group = "Custom_" + str(n)
+        if paramTBGet.HasGroup(group):
+            if paramTBGet.GetGroup(group).GetString("Name") == "TabBar":
+                paramTBGet.RemGroup(group)
+        n += 1
+
     pathTB = str("User parameter:BaseApp/Workbench/Global/Toolbar/TabBar")
     paramTBGet = App.ParamGet(pathTB)
     paramTBGet.SetString("Name", "TabBar")
