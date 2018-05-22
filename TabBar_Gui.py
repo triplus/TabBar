@@ -200,6 +200,7 @@ def tabs():
             else:
                 r = w.tabBar().addTab(actions[i].icon(), None)
             w.tabBar().setTabData(r, i)
+            w.tabBar().setTabToolTip(r, actions[i].text())
 
     for i in range(w.count()):
         if w.tabBar().tabData(i) == active:
