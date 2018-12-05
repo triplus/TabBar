@@ -136,6 +136,12 @@ def onOrientationChanged(w):
             layout()
         else:
             pass
+    
+    prefbutton = p.GetString("PrefButton", "On")
+    if prefbutton == "On":
+        btn.show()
+    else:
+        btn.hide()
 
 
 def tabs():
@@ -309,6 +315,18 @@ def prefDialog():
     l4 = QtGui.QVBoxLayout()
     l4.addWidget(g0)
     l4.addWidget(g1)
+    l6 = QtGui.QVBoxLayout()
+    g6 = QtGui.QGroupBox("Preferences button on tabbar:")
+    g6.setLayout(l6)
+    r8 = QtGui.QRadioButton("On", g6)
+    r8.setObjectName("On")
+    r8.setToolTip("A preference button appears on the right/bottom of the tabbar")
+    r9 = QtGui.QRadioButton("Off", g6)
+    r9.setObjectName("Off")
+    r8.setToolTip("No button on the tabbar (only via menu Tools -> Acessories")
+    l6.addWidget(r8)
+    l6.addWidget(r9)
+    l4.addWidget(g6)
     l4.addStretch()
     l4.insertLayout(0, l3)
     l5 = QtGui.QHBoxLayout()
@@ -401,6 +419,14 @@ def prefDialog():
                     p.SetString("Orientation", i.objectName())
             onWorkbenchActivated()
 
+    def onG6(r):
+        """Set pref button."""
+        if r:
+            for i in g6.findChildren(QtGui.QRadioButton):
+                if i.isChecked():
+                    p.SetString("PrefButton", i.objectName())
+            onWorkbenchActivated()
+
     default = defaults()
     enabled = p.GetString("Enabled", default)
     enabled = enabled.split(",")
@@ -451,6 +477,11 @@ def prefDialog():
         r7.setChecked(True)
     else:
         r3.setChecked(True)
+    prefbutton = p.GetString("PrefButton","On")
+    if prefbutton == "On":
+        r8.setChecked(True)
+    else:
+        r9.setChecked(True)
     r0.toggled.connect(onG0)
     r1.toggled.connect(onG0)
     r2.toggled.connect(onG0)
@@ -459,6 +490,8 @@ def prefDialog():
     r5.toggled.connect(onG1)
     r6.toggled.connect(onG1)
     r7.toggled.connect(onG1)
+    r8.toggled.connect(onG6)
+    r9.toggled.connect(onG6)
     btnUp.clicked.connect(onUp)
     btnDown.clicked.connect(onDown)
     selector.itemChanged.connect(onItemChanged)
