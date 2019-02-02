@@ -136,7 +136,7 @@ def onOrientationChanged(w):
             layout()
         else:
             pass
-    
+
     prefbutton = p.GetString("PrefButton", "On")
     if prefbutton == "On":
         btn.show()
@@ -477,7 +477,7 @@ def prefDialog():
         r7.setChecked(True)
     else:
         r3.setChecked(True)
-    prefbutton = p.GetString("PrefButton","On")
+    prefbutton = p.GetString("PrefButton", "On")
     if prefbutton == "On":
         r8.setChecked(True)
     else:
@@ -534,6 +534,8 @@ def accessoriesMenu():
                 toolsMenu = mb.findChild(QtGui.QMenu, "&Tools")
                 if toolsMenu:
                     toolsMenu.addAction(actionAccessories)
+                    actionAccessories.setVisible(True)
+
             addMenu()
             mw.workbenchActivated.connect(addMenu)
 
