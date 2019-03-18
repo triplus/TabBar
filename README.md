@@ -21,4 +21,4 @@ Windows:
 
 ### Usage:
 
-TabBar widget for FreeCAD provides workbench selector with tabs. TabBar preferences are located under Tools -> Accessories -> TabBar.
+TabBar widget for FreeCAD provides workbench selector with tabs. TabBar preferences are located under Accessories -> TabBar.
